@@ -33,7 +33,7 @@ export function useFuelData() {
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiFetch('/sheets-api?action=get');
+      const data = await apiFetch('get');
       const rows: string[][] = data.rows || [];
       setRecords(rows.map((row, i) => rowToRecord(row, i)));
     } catch (err: any) {
