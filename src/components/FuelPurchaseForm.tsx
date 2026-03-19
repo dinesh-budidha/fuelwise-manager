@@ -16,7 +16,7 @@ interface Props {
   totalAlloted: number;
 }
 
-export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalUsed }: Props) {
+export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalAlloted }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
