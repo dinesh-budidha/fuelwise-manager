@@ -13,10 +13,12 @@ async function apiFetch(action: string, body?: Record<string, unknown>) {
   } else {
     // GET request - use query param
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sheets-api?action=${action}`;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
     const res = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
+      },
       },
     });
     if (!res.ok) throw new Error(await res.text());
