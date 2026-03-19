@@ -96,7 +96,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <tbody className="divide-y divide-border/50">
             {loading ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
                   Loading records...
                 </td>
               </tr>
