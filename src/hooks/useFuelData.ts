@@ -47,10 +47,7 @@ export function useFuelData() {
     const calcs = calculateFields(formData);
     const full = { ...formData, ...calcs };
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'append', row: recordToRow(full) }),
-      });
+      await apiFetch('append', { row: recordToRow(full) });
       toast({ title: 'Record added successfully' });
       await fetchRecords();
       return true;
