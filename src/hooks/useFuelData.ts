@@ -1,26 +1,28 @@
 import { useState, useCallback } from 'react';
 import { FuelRecord, FuelFormData, EMPTY_FORM, calculateFields, recordToRow, rowToRecord } from '@/types/fuel';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE = import.meta.env.VITE_SUPABASE_URL
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
-  : '';
-
-async function apiFetch(path: string, options?: RequestInit) {
-  const url = `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`,
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Request failed: ${res.status}`);
+async function apiFetch(action: string, body?: Record<string, unknown>) {
+  if (body) {
+    const { data, error } = await supabase.functions.invoke('sheets-api', {
+      body: { ...body, action },
+    });
+    if (error) throw new Error(error.message);
+    return data;
+  } else {
+    // GET request - use query param
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sheets-api?action=${action}`;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${anonKey}`,
+        'apikey': anonKey,
+      },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
-  return res.json();
 }
 
 export function useFuelData() {
@@ -45,10 +47,7 @@ export function useFuelData() {
     const calcs = calculateFields(formData);
     const full = { ...formData, ...calcs };
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'append', row: recordToRow(full) }),
-      });
+      await apiFetch('append', { row: recordToRow(full) });
       toast({ title: 'Record added successfully' });
       await fetchRecords();
       return true;
@@ -62,10 +61,7 @@ export function useFuelData() {
     const calcs = calculateFields(formData);
     const full = { ...formData, ...calcs };
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'update', rowIndex: index + 2, row: recordToRow(full) }),
-      });
+      await apiFetch('update', { rowIndex: index + 2, row: recordToRow(full) });
       toast({ title: 'Record updated successfully' });
       await fetchRecords();
       return true;
@@ -77,10 +73,7 @@ export function useFuelData() {
 
   const deleteRecord = useCallback(async (index: number) => {
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'delete', rowIndex: index + 2 }),
-      });
+      await apiFetch('delete', { rowIndex: index + 2 });
       toast({ title: 'Record deleted successfully' });
       await fetchRecords();
       return true;
