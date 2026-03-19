@@ -19,7 +19,6 @@ async function apiFetch(action: string, body?: Record<string, unknown>) {
         'Authorization': `Bearer ${anonKey}`,
         'apikey': anonKey,
       },
-      },
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
