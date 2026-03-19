@@ -123,7 +123,6 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                       </span>
                     </td>
                     <td className="td-cell text-muted-foreground">{rec.issuedDate}</td>
-                    <td className="td-cell text-right tabular-nums">{rec.litersPurchased}</td>
                     <td className="td-cell text-right tabular-nums">{rec.fuelAlloted}</td>
                     <td className="td-cell text-right tabular-nums">{rec.startingReading}</td>
                     <td className="td-cell text-right tabular-nums">{rec.endingReading}</td>
