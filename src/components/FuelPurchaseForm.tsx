@@ -13,7 +13,7 @@ interface Props {
   onAdd: (date: string, liters: number) => Promise<boolean>;
   onDelete: (index: number) => Promise<boolean>;
   totalPurchased: number;
-  totalUsed: number;
+  totalAlloted: number;
 }
 
 export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalUsed }: Props) {
