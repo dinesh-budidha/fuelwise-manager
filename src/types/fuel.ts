@@ -19,6 +19,35 @@ export interface FuelRecord {
 
 export type FuelFormData = Omit<FuelRecord, 'id'>;
 
+// Vehicle type configuration
+export interface VehicleConfig {
+  type: 'km' | 'hour';
+  rate: number; // km/ltr for km-based, ltrs/hr for hour-based
+  label: string;
+}
+
+export const VEHICLE_DEFAULTS: Record<string, VehicleConfig> = {
+  'Transit Mixer': { type: 'km', rate: 2, label: '2 Km/Ltr' },
+  'Tipper': { type: 'km', rate: 2, label: '2 Km/Ltr' },
+  'Tractor': { type: 'km', rate: 7, label: '7 Km/Ltr' },
+  'Camper': { type: 'km', rate: 15, label: '15 Km/Ltr' },
+  'Water Tanker': { type: 'km', rate: 2, label: '2 Km/Ltr' },
+  'Trailer': { type: 'km', rate: 2, label: '2 Km/Ltr' },
+  'Roller': { type: 'hour', rate: 8, label: '8 Ltrs/Hr' },
+  'JCB': { type: 'hour', rate: 5, label: '5 Ltrs/Hr' },
+  'Excavator': { type: 'hour', rate: 14, label: '14 Ltrs/Hr' },
+};
+
+export const VEHICLE_TYPES = Object.keys(VEHICLE_DEFAULTS);
+
+export function isHourBased(vehicleType: string): boolean {
+  return VEHICLE_DEFAULTS[vehicleType]?.type === 'hour';
+}
+
+export function getVehicleConfig(vehicleType: string): VehicleConfig | undefined {
+  return VEHICLE_DEFAULTS[vehicleType];
+}
+
 export const EMPTY_FORM: FuelFormData = {
   slNo: '',
   siteName: '',
@@ -44,13 +73,27 @@ export const COLUMNS = [
   'KM per Ltr', 'Used in Ltrs', 'Balance Liters',
 ] as const;
 
-export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData, 'kilometers' | 'kmPerLtr' | 'balanceLiters'> {
-  const kilometers = (data.endingReading || 0) - (data.startingReading || 0);
-  const kmPerLtr = data.fuelAlloted && data.fuelAlloted > 0
-    ? Number((kilometers / data.fuelAlloted).toFixed(2))
-    : 0;
-  const balanceLiters = (data.litersPurchased || 0) - (data.usedInLtrs || 0);
-  return { kilometers, kmPerLtr, balanceLiters };
+export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData, 'kilometers' | 'kmPerLtr' | 'usedInLtrs' | 'balanceLiters'> {
+  const config = getVehicleConfig(data.vehicleType || '');
+  const kilometers = Math.max(0, (data.endingReading || 0) - (data.startingReading || 0));
+
+  let kmPerLtr = data.kmPerLtr || 0;
+  let usedInLtrs = 0;
+
+  if (config) {
+    if (config.type === 'km') {
+      kmPerLtr = config.rate;
+      usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
+    } else {
+      // Hour-based: rate is ltrs per hour
+      kmPerLtr = config.rate; // Store consumption rate in this field
+      usedInLtrs = Number(((data.hours || 0) * config.rate).toFixed(2));
+    }
+  }
+
+  const balanceLiters = Number(((data.fuelAlloted || 0) - usedInLtrs).toFixed(2));
+
+  return { kilometers, kmPerLtr, usedInLtrs, balanceLiters };
 }
 
 export function recordToRow(record: FuelFormData): string[] {
