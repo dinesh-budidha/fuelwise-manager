@@ -82,7 +82,7 @@ export default function Index() {
       </header>
 
       <main className="max-w-[1600px] mx-auto space-y-6">
-        <DashboardSummary records={allRecords} totalPurchased={totalPurchased} />
+        <DashboardSummary records={allRecords} totalPurchased={totalPurchased} totalAlloted={totalAlloted} />
 
         <div className="card-raised p-1 flex gap-1 w-fit">
           <button
