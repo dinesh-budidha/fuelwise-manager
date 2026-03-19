@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FuelFormData, EMPTY_FORM, calculateFields, VEHICLE_TYPES, VEHICLE_DEFAULTS, isHourBased, getVehicleConfig } from '@/types/fuel';
-import { Plus, Save, X, AlertTriangle } from 'lucide-react';
+import { Plus, Save, X, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface Props {
@@ -8,18 +8,23 @@ interface Props {
   editData?: FuelFormData | null;
   onCancelEdit?: () => void;
   nextSlNo: number;
+  onVehicleNoBlur?: (vehicleNo: string) => Promise<string[] | null>;
 }
 
-export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }: Props) {
+export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, onVehicleNoBlur }: Props) {
   const [form, setForm] = useState<FuelFormData>({ ...EMPTY_FORM, slNo: String(nextSlNo) });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [fetchingVehicle, setFetchingVehicle] = useState(false);
+  const [prevVehicleInfo, setPrevVehicleInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (editData) {
       setForm(editData);
+      setPrevVehicleInfo(null);
     } else {
       setForm({ ...EMPTY_FORM, slNo: String(nextSlNo) });
+      setPrevVehicleInfo(null);
     }
   }, [editData, nextSlNo]);
 
@@ -29,16 +34,54 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
     setForm(prev => ({ ...prev, ...calcs }));
   }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType]);
 
-  // Auto-fill defaults when vehicle type changes
   const handleVehicleTypeChange = (vehicleType: string) => {
     const config = getVehicleConfig(vehicleType);
     setForm(prev => ({
       ...prev,
       vehicleType,
-      // Reset irrelevant fields
       ...(config?.type === 'hour' ? { startingReading: 0, endingReading: 0 } : { hours: 0 }),
     }));
     setErrors({});
+  };
+
+  // Fetch last vehicle entry when vehicle number loses focus
+  const handleVehicleNoBlur = async () => {
+    const vehicleNo = form.vehicleNo.trim();
+    if (!vehicleNo || editData || !onVehicleNoBlur) return;
+
+    setFetchingVehicle(true);
+    try {
+      const lastRow = await onVehicleNoBlur(vehicleNo);
+      if (lastRow) {
+        const prevEndingReading = Number(lastRow[9]) || 0;
+        const prevBalance = Number(lastRow[14]) || 0;
+        const prevVehicleType = lastRow[5] || '';
+        const prevSite = lastRow[1] || '';
+
+        setForm(prev => ({
+          ...prev,
+          startingReading: prevEndingReading,
+          vehicleType: prev.vehicleType || prevVehicleType,
+          siteName: prev.siteName || prevSite,
+        }));
+
+        setPrevVehicleInfo(
+          `Last entry: Ending Reading ${prevEndingReading}, Balance ${prevBalance} L`
+        );
+
+        if (prevVehicleType && !form.vehicleType) {
+          handleVehicleTypeChange(prevVehicleType);
+        }
+
+        toast({ title: 'Vehicle found', description: `Auto-filled from previous entry (Reading: ${prevEndingReading})` });
+      } else {
+        setPrevVehicleInfo(null);
+      }
+    } catch {
+      // silent fail
+    } finally {
+      setFetchingVehicle(false);
+    }
   };
 
   const validate = (): boolean => {
@@ -62,14 +105,12 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
     }
 
     if (form.fuelAlloted < 0) newErrors.fuelAlloted = 'Cannot be negative';
-    if (form.litersPurchased < 0) newErrors.litersPurchased = 'Cannot be negative';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (field: keyof FuelFormData, value: string | number) => {
-    // Prevent negative numbers
     if (typeof value === 'number' && value < 0) value = 0;
     setForm(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
@@ -86,6 +127,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
     if (success && !editData) {
       setForm({ ...EMPTY_FORM, slNo: String(nextSlNo + 1) });
       setErrors({});
+      setPrevVehicleInfo(null);
     }
     setSubmitting(false);
   };
@@ -115,7 +157,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
         <Field label="Site Name" value={form.siteName} onChange={v => handleChange('siteName', v)} error={errors.siteName} />
         <Field label="Issued Date" type="date" value={form.issuedDate} onChange={v => handleChange('issuedDate', v)} />
 
-        {/* Vehicle Type - Dropdown */}
+        {/* Vehicle Type */}
         <div className="flex flex-col gap-1">
           <label className="label-uppercase">Vehicle Type</label>
           <select
@@ -142,11 +184,28 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
           options={['Company', 'Private']}
           onChange={v => handleChange('vehicleOwnership', v)}
         />
-        <Field label="Vehicle No" value={form.vehicleNo} onChange={v => handleChange('vehicleNo', v)} error={errors.vehicleNo} />
+
+        {/* Vehicle No with auto-fill on blur */}
+        <div className="flex flex-col gap-1">
+          <label className="label-uppercase flex items-center gap-1">
+            Vehicle No
+            {fetchingVehicle && <Loader2 size={10} className="animate-spin text-primary" />}
+          </label>
+          <input
+            value={form.vehicleNo}
+            onChange={e => handleChange('vehicleNo', e.target.value)}
+            onBlur={handleVehicleNoBlur}
+            className={`input-recessed ${errors.vehicleNo ? 'ring-2 ring-destructive' : ''}`}
+            placeholder="Enter & tab to auto-fill"
+          />
+          {errors.vehicleNo && <span className="text-[10px] text-destructive">{errors.vehicleNo}</span>}
+          {prevVehicleInfo && (
+            <span className="text-[10px] text-primary font-medium">{prevVehicleInfo}</span>
+          )}
+        </div>
 
         <NumField label="Fuel Alloted" value={form.fuelAlloted} onChange={v => handleChange('fuelAlloted', v)} error={errors.fuelAlloted} />
 
-        {/* Conditional fields based on vehicle type */}
         {!hourBased && (
           <>
             <NumField label="Starting Reading" value={form.startingReading} onChange={v => handleChange('startingReading', v)} />
@@ -158,7 +217,6 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
           <NumField label="Hours" value={form.hours} onChange={v => handleChange('hours', v)} error={errors.hours} />
         )}
 
-        {/* Auto-calculated read-only fields */}
         {!hourBased && <ReadOnly label="Kilometers" value={form.kilometers} />}
         <ReadOnly
           label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
@@ -199,9 +257,7 @@ function NumField({ label, value, onChange, error }: {
     <div className="flex flex-col gap-1">
       <label className="label-uppercase">{label}</label>
       <input
-        type="number"
-        step="any"
-        min="0"
+        type="number" step="any" min="0"
         value={value || ''}
         onChange={e => onChange(Math.max(0, Number(e.target.value) || 0))}
         className={`input-recessed tabular-nums ${error ? 'ring-2 ring-destructive' : ''}`}

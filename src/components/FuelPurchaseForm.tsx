@@ -13,9 +13,10 @@ interface Props {
   onAdd: (date: string, liters: number) => Promise<boolean>;
   onDelete: (index: number) => Promise<boolean>;
   totalPurchased: number;
+  totalUsed: number;
 }
 
-export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased }: Props) {
+export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalUsed }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
@@ -39,6 +40,9 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
       setDeleteIdx(null);
     }
   };
+
+  // Running balance per row
+  let runningTotal = 0;
 
   return (
     <div className="card-raised p-5 space-y-4">
@@ -65,7 +69,7 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
         </button>
       </form>
 
-      {/* Purchase History */}
+      {/* Purchase History with Opening Balance */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="label-uppercase">Purchase History</span>
@@ -79,30 +83,38 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
         ) : purchases.length === 0 ? (
           <p className="text-sm text-muted-foreground py-3">No purchases recorded yet</p>
         ) : (
-          <div className="max-h-[240px] overflow-y-auto border border-border rounded">
+          <div className="max-h-[300px] overflow-y-auto border border-border rounded">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="th-header">Date</th>
                   <th className="th-header text-right">Liters</th>
+                  <th className="th-header text-right">Opening Balance</th>
                   <th className="th-header text-center w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {purchases.map((p, i) => (
-                  <tr key={p.id} className="hover:bg-primary/[0.03] group">
-                    <td className="td-cell text-muted-foreground">{p.date}</td>
-                    <td className="td-cell text-right tabular-nums font-medium">{p.liters.toLocaleString()}</td>
-                    <td className="td-cell text-center">
-                      <button
-                        onClick={() => setDeleteIdx(i)}
-                        className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {purchases.map((p, i) => {
+                  runningTotal += p.liters;
+                  const openingBal = runningTotal - totalUsed;
+                  return (
+                    <tr key={p.id} className="hover:bg-primary/[0.03] group">
+                      <td className="td-cell text-muted-foreground">{p.date}</td>
+                      <td className="td-cell text-right tabular-nums font-medium">{p.liters.toLocaleString()}</td>
+                      <td className={`td-cell text-right tabular-nums font-medium ${openingBal < 100 ? 'text-destructive' : 'text-primary'}`}>
+                        {openingBal.toLocaleString()} L
+                      </td>
+                      <td className="td-cell text-center">
+                        <button
+                          onClick={() => setDeleteIdx(i)}
+                          className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

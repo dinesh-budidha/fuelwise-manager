@@ -12,7 +12,7 @@ import ExportButton from '@/components/ExportButton';
 export default function Index() {
   const {
     records, allRecords, loading, searchTerm, setSearchTerm,
-    fetchRecords, addRecord, updateRecord, deleteRecord,
+    fetchRecords, addRecord, updateRecord, deleteRecord, getVehicleLastEntry,
   } = useFuelData();
 
   const {
@@ -55,11 +55,11 @@ export default function Index() {
 
   const handleCancelEdit = () => { setEditIndex(null); setEditData(null); };
 
-  // Unique values for filters
+  const totalUsed = allRecords.reduce((s, r) => s + r.usedInLtrs, 0);
+
   const uniqueVehicles = [...new Set(allRecords.map(r => r.vehicleNo).filter(Boolean))];
   const uniqueSites = [...new Set(allRecords.map(r => r.siteName).filter(Boolean))];
 
-  // Apply filters on top of search
   const filteredRecords = records.filter(r => {
     if (filterVehicle && r.vehicleNo !== filterVehicle) return false;
     if (filterSite && r.siteName !== filterSite) return false;
@@ -68,7 +68,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
-      {/* Header */}
       <header className="max-w-[1600px] mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Fuel Operations</h1>
@@ -83,10 +82,8 @@ export default function Index() {
       </header>
 
       <main className="max-w-[1600px] mx-auto space-y-6">
-        {/* Summary with Opening Balance */}
         <DashboardSummary records={allRecords} totalPurchased={totalPurchased} />
 
-        {/* Tab Switcher */}
         <div className="card-raised p-1 flex gap-1 w-fit">
           <button
             onClick={() => setActiveTab('vehicle')}
@@ -106,7 +103,6 @@ export default function Index() {
           </button>
         </div>
 
-        {/* Vehicle Entry Tab */}
         {activeTab === 'vehicle' && (
           <div className="grid grid-cols-12 gap-6">
             <div className="col-span-12 xl:col-span-4">
@@ -115,10 +111,10 @@ export default function Index() {
                 editData={editData}
                 onCancelEdit={handleCancelEdit}
                 nextSlNo={allRecords.length + 1}
+                onVehicleNoBlur={getVehicleLastEntry}
               />
             </div>
             <div className="col-span-12 xl:col-span-8 space-y-3">
-              {/* Search + Filters */}
               <div className="card-raised p-3 flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[180px] max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
@@ -129,19 +125,11 @@ export default function Index() {
                     onChange={e => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <select
-                  value={filterVehicle}
-                  onChange={e => setFilterVehicle(e.target.value)}
-                  className="input-recessed text-xs min-w-[120px]"
-                >
+                <select value={filterVehicle} onChange={e => setFilterVehicle(e.target.value)} className="input-recessed text-xs min-w-[120px]">
                   <option value="">All Vehicles</option>
                   {uniqueVehicles.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select
-                  value={filterSite}
-                  onChange={e => setFilterSite(e.target.value)}
-                  className="input-recessed text-xs min-w-[120px]"
-                >
+                <select value={filterSite} onChange={e => setFilterSite(e.target.value)} className="input-recessed text-xs min-w-[120px]">
                   <option value="">All Sites</option>
                   {uniqueSites.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -154,7 +142,6 @@ export default function Index() {
           </div>
         )}
 
-        {/* Fuel Purchase Tab */}
         {activeTab === 'purchase' && (
           <div className="max-w-2xl">
             <FuelPurchaseForm
@@ -163,6 +150,7 @@ export default function Index() {
               onAdd={addPurchase}
               onDelete={deletePurchase}
               totalPurchased={totalPurchased}
+              totalUsed={totalUsed}
             />
           </div>
         )}
