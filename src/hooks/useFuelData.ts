@@ -61,10 +61,7 @@ export function useFuelData() {
     const calcs = calculateFields(formData);
     const full = { ...formData, ...calcs };
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'update', rowIndex: index + 2, row: recordToRow(full) }),
-      });
+      await apiFetch('update', { rowIndex: index + 2, row: recordToRow(full) });
       toast({ title: 'Record updated successfully' });
       await fetchRecords();
       return true;
