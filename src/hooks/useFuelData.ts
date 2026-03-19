@@ -73,10 +73,7 @@ export function useFuelData() {
 
   const deleteRecord = useCallback(async (index: number) => {
     try {
-      await apiFetch('/sheets-api', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'delete', rowIndex: index + 2 }),
-      });
+      await apiFetch('delete', { rowIndex: index + 2 });
       toast({ title: 'Record deleted successfully' });
       await fetchRecords();
       return true;
