@@ -102,7 +102,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
                   No records found
                 </td>
               </tr>
