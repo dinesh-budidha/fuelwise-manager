@@ -144,7 +144,6 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo }:
         />
         <Field label="Vehicle No" value={form.vehicleNo} onChange={v => handleChange('vehicleNo', v)} error={errors.vehicleNo} />
 
-        <NumField label="Liters Purchased" value={form.litersPurchased} onChange={v => handleChange('litersPurchased', v)} error={errors.litersPurchased} />
         <NumField label="Fuel Alloted" value={form.fuelAlloted} onChange={v => handleChange('fuelAlloted', v)} error={errors.fuelAlloted} />
 
         {/* Conditional fields based on vehicle type */}

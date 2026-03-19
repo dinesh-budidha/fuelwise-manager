@@ -29,7 +29,6 @@ const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'vehicleType', label: 'Type' },
   { key: 'vehicleOwnership', label: 'Own.' },
   { key: 'issuedDate', label: 'Date' },
-  { key: 'litersPurchased', label: 'Ltrs Purch.', numeric: true },
   { key: 'fuelAlloted', label: 'Fuel Allot.', numeric: true },
   { key: 'startingReading', label: 'Start', numeric: true },
   { key: 'endingReading', label: 'End', numeric: true },
@@ -97,13 +96,13 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <tbody className="divide-y divide-border/50">
             {loading ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
                   Loading records...
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
                   No records found
                 </td>
               </tr>
@@ -124,7 +123,6 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                       </span>
                     </td>
                     <td className="td-cell text-muted-foreground">{rec.issuedDate}</td>
-                    <td className="td-cell text-right tabular-nums">{rec.litersPurchased}</td>
                     <td className="td-cell text-right tabular-nums">{rec.fuelAlloted}</td>
                     <td className="td-cell text-right tabular-nums">{rec.startingReading}</td>
                     <td className="td-cell text-right tabular-nums">{rec.endingReading}</td>
