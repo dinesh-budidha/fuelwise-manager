@@ -116,7 +116,7 @@ async function getVehicleLastEntry(vehicleNo: string) {
 }
 
 // Calculate running opening balance and update the column in FuelPurchases
-async function updateOpeningBalance(totalUsed: number) {
+async function updateOpeningBalance(totalAlloted: number) {
   try {
     const data = await sheetsRequest('/values/FuelPurchases!A2:B');
     const rows: string[][] = data.values || [];
@@ -126,7 +126,7 @@ async function updateOpeningBalance(totalUsed: number) {
     const balances: string[][] = [];
     for (const row of rows) {
       runningTotal += Number(row[1]) || 0;
-      balances.push([String(runningTotal - totalUsed)]);
+      balances.push([String(runningTotal - totalAlloted)]);
     }
 
     // Write opening balance column (C2:C)
@@ -187,9 +187,9 @@ serve(async (req) => {
         });
         // After appending vehicle data, update opening balances
         try {
-          const vData = await sheetsRequest('/values/Sheet1!N2:N');
-          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
-          await updateOpeningBalance(totalUsed);
+          const vData = await sheetsRequest('/values/Sheet1!H2:H');
+          const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalAlloted);
         } catch (e) { console.error('balance update error:', e); }
         return json({ success: true });
       }
@@ -227,9 +227,9 @@ serve(async (req) => {
         });
         // Calculate and write opening balances
         try {
-          const vData = await sheetsRequest('/values/Sheet1!N2:N');
-          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
-          await updateOpeningBalance(totalUsed);
+          const vData = await sheetsRequest('/values/Sheet1!H2:H');
+          const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalAlloted);
         } catch (e) { console.error('balance update error:', e); }
         return json({ success: true });
       }
@@ -249,9 +249,9 @@ serve(async (req) => {
         });
         // Recalculate opening balances after delete
         try {
-          const vData = await sheetsRequest('/values/Sheet1!N2:N');
-          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
-          await updateOpeningBalance(totalUsed);
+          const vData = await sheetsRequest('/values/Sheet1!H2:H');
+          const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalAlloted);
         } catch (e) { console.error('balance update error:', e); }
         return json({ success: true });
       }

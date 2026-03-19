@@ -55,7 +55,7 @@ export default function Index() {
 
   const handleCancelEdit = () => { setEditIndex(null); setEditData(null); };
 
-  const totalUsed = allRecords.reduce((s, r) => s + r.usedInLtrs, 0);
+  const totalAlloted = allRecords.reduce((s, r) => s + r.fuelAlloted, 0);
 
   const uniqueVehicles = [...new Set(allRecords.map(r => r.vehicleNo).filter(Boolean))];
   const uniqueSites = [...new Set(allRecords.map(r => r.siteName).filter(Boolean))];
@@ -82,7 +82,7 @@ export default function Index() {
       </header>
 
       <main className="max-w-[1600px] mx-auto space-y-6">
-        <DashboardSummary records={allRecords} totalPurchased={totalPurchased} />
+        <DashboardSummary records={allRecords} totalPurchased={totalPurchased} totalAlloted={totalAlloted} />
 
         <div className="card-raised p-1 flex gap-1 w-fit">
           <button
@@ -150,7 +150,7 @@ export default function Index() {
               onAdd={addPurchase}
               onDelete={deletePurchase}
               totalPurchased={totalPurchased}
-              totalUsed={totalUsed}
+              totalAlloted={totalAlloted}
             />
           </div>
         )}

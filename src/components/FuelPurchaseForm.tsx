@@ -13,10 +13,10 @@ interface Props {
   onAdd: (date: string, liters: number) => Promise<boolean>;
   onDelete: (index: number) => Promise<boolean>;
   totalPurchased: number;
-  totalUsed: number;
+  totalAlloted: number;
 }
 
-export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalUsed }: Props) {
+export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalAlloted }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
@@ -96,7 +96,7 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
               <tbody className="divide-y divide-border/50">
                 {purchases.map((p, i) => {
                   runningTotal += p.liters;
-                  const openingBal = runningTotal - totalUsed;
+                  const openingBal = runningTotal - totalAlloted;
                   return (
                     <tr key={p.id} className="hover:bg-primary/[0.03] group">
                       <td className="td-cell text-muted-foreground">{p.date}</td>
