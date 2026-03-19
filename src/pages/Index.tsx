@@ -55,7 +55,7 @@ export default function Index() {
 
   const handleCancelEdit = () => { setEditIndex(null); setEditData(null); };
 
-  const totalUsed = allRecords.reduce((s, r) => s + r.usedInLtrs, 0);
+  const totalAlloted = allRecords.reduce((s, r) => s + r.fuelAlloted, 0);
 
   const uniqueVehicles = [...new Set(allRecords.map(r => r.vehicleNo).filter(Boolean))];
   const uniqueSites = [...new Set(allRecords.map(r => r.siteName).filter(Boolean))];
