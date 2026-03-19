@@ -150,7 +150,7 @@ export default function Index() {
               onAdd={addPurchase}
               onDelete={deletePurchase}
               totalPurchased={totalPurchased}
-              totalUsed={totalUsed}
+              totalAlloted={totalAlloted}
             />
           </div>
         )}

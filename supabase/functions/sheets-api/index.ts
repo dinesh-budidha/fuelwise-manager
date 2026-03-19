@@ -249,9 +249,9 @@ serve(async (req) => {
         });
         // Recalculate opening balances after delete
         try {
-          const vData = await sheetsRequest('/values/Sheet1!N2:N');
-          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
-          await updateOpeningBalance(totalUsed);
+          const vData = await sheetsRequest('/values/Sheet1!H2:H');
+          const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalAlloted);
         } catch (e) { console.error('balance update error:', e); }
         return json({ success: true });
       }

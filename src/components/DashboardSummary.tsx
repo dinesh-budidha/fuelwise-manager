@@ -1,21 +1,23 @@
 import { FuelRecord } from '@/types/fuel';
-import { Fuel, Truck, MapPin, Gauge, Droplets, AlertTriangle } from 'lucide-react';
+import { Fuel, Truck, MapPin, Gauge, Droplets, AlertTriangle, Package } from 'lucide-react';
 
 interface Props {
   records: FuelRecord[];
   totalPurchased: number;
+  totalAlloted: number;
 }
 
-export default function DashboardSummary({ records, totalPurchased }: Props) {
+export default function DashboardSummary({ records, totalPurchased, totalAlloted }: Props) {
   const totalUsed = records.reduce((s, r) => s + r.usedInLtrs, 0);
   const totalKm = records.reduce((s, r) => s + r.kilometers, 0);
   const uniqueVehicles = new Set(records.map(r => r.vehicleNo).filter(Boolean)).size;
   const uniqueSites = new Set(records.map(r => r.siteName).filter(Boolean)).size;
-  const openingBalance = totalPurchased - totalUsed;
+  const openingBalance = totalPurchased - totalAlloted;
   const isLowBalance = openingBalance < 100 && totalPurchased > 0;
 
   const stats = [
     { label: 'Total Purchased', value: `${totalPurchased.toLocaleString()} L`, icon: Droplets, accent: 'text-primary' },
+    { label: 'Total Alloted', value: `${totalAlloted.toLocaleString()} L`, icon: Package, accent: 'text-foreground' },
     { label: 'Total Used', value: `${totalUsed.toLocaleString()} L`, icon: Fuel, accent: 'text-foreground' },
     { label: 'Total Distance', value: `${totalKm.toLocaleString()} km`, icon: Gauge, accent: 'text-foreground' },
     { label: 'Vehicles', value: uniqueVehicles, icon: Truck, accent: 'text-foreground' },
@@ -35,7 +37,7 @@ export default function DashboardSummary({ records, totalPurchased }: Props) {
             {openingBalance.toLocaleString()} L
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {totalPurchased.toLocaleString()} purchased − {totalUsed.toLocaleString()} used
+            {totalPurchased.toLocaleString()} purchased − {totalAlloted.toLocaleString()} alloted
           </div>
         </div>
         {isLowBalance && (
@@ -46,7 +48,7 @@ export default function DashboardSummary({ records, totalPurchased }: Props) {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
         {stats.map(s => (
           <div key={s.label} className="card-raised p-4 flex items-center gap-3">
             <div className="p-2 rounded bg-muted">
