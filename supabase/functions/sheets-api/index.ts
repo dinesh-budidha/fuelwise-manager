@@ -80,6 +80,13 @@ async function ensureSheet(sheetName: string) {
           requests: [{ addSheet: { properties: { title: sheetName } } }],
         }),
       });
+      // Add headers for FuelPurchases sheet
+      if (sheetName === 'FuelPurchases') {
+        await sheetsRequest('/values/FuelPurchases!A1:C1?valueInputOption=USER_ENTERED', {
+          method: 'PUT',
+          body: JSON.stringify({ values: [['Fuel Purchased Date', 'Liters Purchased', 'Opening Balance']] }),
+        });
+      }
     }
   } catch (e) {
     console.error('ensureSheet error:', e);
@@ -90,6 +97,53 @@ async function getSheetId(sheetName: string): Promise<number> {
   const meta = await sheetsRequest('?fields=sheets.properties');
   const sheet = meta.sheets?.find((s: any) => s.properties.title === sheetName);
   return sheet?.properties?.sheetId || 0;
+}
+
+// Get the last entry for a specific vehicle number from Sheet1
+async function getVehicleLastEntry(vehicleNo: string) {
+  const data = await sheetsRequest('/values/Sheet1!A2:O');
+  const rows: string[][] = data.values || [];
+  // Vehicle No is column index 6 (G)
+  let lastRow: string[] | null = null;
+  let lastIndex = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i][6]?.toLowerCase() === vehicleNo.toLowerCase()) {
+      lastRow = rows[i];
+      lastIndex = i;
+    }
+  }
+  return lastRow ? { row: lastRow, index: lastIndex } : null;
+}
+
+// Calculate running opening balance and update the column in FuelPurchases
+async function updateOpeningBalance(totalUsed: number) {
+  try {
+    const data = await sheetsRequest('/values/FuelPurchases!A2:B');
+    const rows: string[][] = data.values || [];
+    if (rows.length === 0) return;
+
+    let runningTotal = 0;
+    const balances: string[][] = [];
+    for (const row of rows) {
+      runningTotal += Number(row[1]) || 0;
+      balances.push([String(runningTotal - totalUsed)]);
+    }
+
+    // Write opening balance column (C2:C)
+    await sheetsRequest(`/values/FuelPurchases!C2:C${rows.length + 1}?valueInputOption=USER_ENTERED`, {
+      method: 'PUT',
+      body: JSON.stringify({ values: balances }),
+    });
+  } catch (e) {
+    console.error('updateOpeningBalance error:', e);
+  }
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 serve(async (req) => {
@@ -103,36 +157,41 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
-    // === VEHICLE DATA (Sheet1) ===
-    if (req.method === 'GET' && action === 'get') {
-      const data = await sheetsRequest('/values/Sheet1!A2:O');
-      return new Response(JSON.stringify({ rows: data.values || [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // === GET actions ===
+    if (req.method === 'GET') {
+      if (action === 'get') {
+        const data = await sheetsRequest('/values/Sheet1!A2:O');
+        return json({ rows: data.values || [] });
+      }
+      if (action === 'get_purchases') {
+        await ensureSheet('FuelPurchases');
+        const data = await sheetsRequest('/values/FuelPurchases!A2:C');
+        return json({ rows: data.values || [] });
+      }
+      if (action === 'get_vehicle_last') {
+        const vehicleNo = url.searchParams.get('vehicleNo');
+        if (!vehicleNo) return json({ error: 'vehicleNo required' }, 400);
+        const result = await getVehicleLastEntry(vehicleNo);
+        return json({ lastEntry: result?.row || null });
+      }
     }
 
-    // === FUEL PURCHASES (FuelPurchases sheet) ===
-    if (req.method === 'GET' && action === 'get_purchases') {
-      await ensureSheet('FuelPurchases');
-      const data = await sheetsRequest('/values/FuelPurchases!A2:C');
-      return new Response(JSON.stringify({ rows: data.values || [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // POST actions
+    // === POST actions ===
     if (req.method === 'POST') {
       const body = await req.json();
 
-      // --- Vehicle data actions (Sheet1) ---
       if (body.action === 'append') {
         await sheetsRequest('/values/Sheet1!A2:O:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // After appending vehicle data, update opening balances
+        try {
+          const vData = await sheetsRequest('/values/Sheet1!N2:N');
+          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalUsed);
+        } catch (e) { console.error('balance update error:', e); }
+        return json({ success: true });
       }
 
       if (body.action === 'update') {
@@ -141,9 +200,7 @@ serve(async (req) => {
           method: 'PUT',
           body: JSON.stringify({ values: [body.row] }),
         });
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ success: true });
       }
 
       if (body.action === 'delete') {
@@ -158,21 +215,23 @@ serve(async (req) => {
             }],
           }),
         });
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return json({ success: true });
       }
 
-      // --- Fuel purchase actions (FuelPurchases sheet) ---
       if (body.action === 'append_purchase') {
         await ensureSheet('FuelPurchases');
-        await sheetsRequest('/values/FuelPurchases!A2:C:append?valueInputOption=USER_ENTERED', {
+        // Append date + liters (opening balance will be calculated)
+        await sheetsRequest('/values/FuelPurchases!A2:B:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Calculate and write opening balances
+        try {
+          const vData = await sheetsRequest('/values/Sheet1!N2:N');
+          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalUsed);
+        } catch (e) { console.error('balance update error:', e); }
+        return json({ success: true });
       }
 
       if (body.action === 'delete_purchase') {
@@ -188,22 +247,20 @@ serve(async (req) => {
             }],
           }),
         });
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Recalculate opening balances after delete
+        try {
+          const vData = await sheetsRequest('/values/Sheet1!N2:N');
+          const totalUsed = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
+          await updateOpeningBalance(totalUsed);
+        } catch (e) { console.error('balance update error:', e); }
+        return json({ success: true });
       }
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Invalid action' }, 400);
   } catch (error: unknown) {
     console.error('Edge function error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ error: message }, 500);
   }
 });
