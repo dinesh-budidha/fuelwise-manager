@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FuelFormData, EMPTY_FORM, calculateFields, VEHICLE_TYPES, VEHICLE_DEFAULTS, isHourBased, getVehicleConfig } from '@/types/fuel';
+import { FuelFormData, EMPTY_FORM, calculateFields, VEHICLE_TYPES, VEHICLE_DEFAULTS, FUEL_TYPES, isHourBased, getVehicleConfig, DG_CAPACITIES, DG_CAPACITY_OPTIONS } from '@/types/fuel';
 import { Plus, Save, X, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -28,27 +28,25 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
     }
   }, [editData, nextSlNo]);
 
-  // Auto-calculate when inputs change
   useEffect(() => {
     const calcs = calculateFields(form);
     setForm(prev => ({ ...prev, ...calcs }));
-  }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType]);
+  }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType, form.dgCapacity]);
 
   const handleVehicleTypeChange = (vehicleType: string) => {
     const config = getVehicleConfig(vehicleType);
     setForm(prev => ({
       ...prev,
       vehicleType,
+      dgCapacity: vehicleType === 'Diesel Generator' ? prev.dgCapacity : '',
       ...(config?.type === 'hour' ? { startingReading: 0, endingReading: 0 } : { hours: 0 }),
     }));
     setErrors({});
   };
 
-  // Fetch last vehicle entry when vehicle number loses focus
   const handleVehicleNoBlur = async () => {
     const vehicleNo = form.vehicleNo.trim();
     if (!vehicleNo || editData || !onVehicleNoBlur) return;
-
     setFetchingVehicle(true);
     try {
       const lastRow = await onVehicleNoBlur(vehicleNo);
@@ -65,9 +63,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           siteName: prev.siteName || prevSite,
         }));
 
-        setPrevVehicleInfo(
-          `Last entry: Ending Reading ${prevEndingReading}, Balance ${prevBalance} L`
-        );
+        setPrevVehicleInfo(`Last entry: Ending Reading ${prevEndingReading}, Balance ${prevBalance} L`);
 
         if (prevVehicleType && !form.vehicleType) {
           handleVehicleTypeChange(prevVehicleType);
@@ -91,6 +87,10 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
     if (!form.vehicleType) newErrors.vehicleType = 'Select a vehicle type';
     if (!form.siteName.trim()) newErrors.siteName = 'Site name is required';
     if (!form.vehicleNo.trim()) newErrors.vehicleNo = 'Vehicle number is required';
+
+    if (form.vehicleType === 'Diesel Generator' && !form.dgCapacity) {
+      newErrors.dgCapacity = 'Select DG capacity';
+    }
 
     if (config?.type === 'km') {
       if (form.endingReading < form.startingReading) {
@@ -134,6 +134,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
   const hourBased = isHourBased(form.vehicleType);
   const config = getVehicleConfig(form.vehicleType);
+  const isDG = form.vehicleType === 'Diesel Generator';
 
   return (
     <form onSubmit={handleSubmit} className="card-raised p-5">
@@ -157,6 +158,9 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
         <Field label="Site Name" value={form.siteName} onChange={v => handleChange('siteName', v)} error={errors.siteName} />
         <Field label="Issued Date" type="date" value={form.issuedDate} onChange={v => handleChange('issuedDate', v)} />
 
+        {/* Fuel Type */}
+        <SelectField label="Fuel Type" value={form.fuelType} options={[...FUEL_TYPES]} onChange={v => handleChange('fuelType', v)} />
+
         {/* Vehicle Type */}
         <div className="flex flex-col gap-1">
           <label className="label-uppercase">Vehicle Type</label>
@@ -171,12 +175,35 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
             ))}
           </select>
           {errors.vehicleType && <span className="text-[10px] text-destructive">{errors.vehicleType}</span>}
-          {config && (
+          {config && !isDG && (
             <span className="text-[10px] text-muted-foreground">
               Default: {config.label} ({config.type === 'km' ? 'KM-based' : 'Hour-based'})
             </span>
           )}
         </div>
+
+        {/* DG Capacity - only for Diesel Generator */}
+        {isDG && (
+          <div className="flex flex-col gap-1">
+            <label className="label-uppercase">DG Capacity</label>
+            <select
+              value={form.dgCapacity}
+              onChange={e => handleChange('dgCapacity', e.target.value)}
+              className={`input-recessed ${errors.dgCapacity ? 'ring-2 ring-destructive' : ''}`}
+            >
+              <option value="">Select Capacity...</option>
+              {DG_CAPACITY_OPTIONS.map(c => (
+                <option key={c} value={c}>{c} — {DG_CAPACITIES[c].label}</option>
+              ))}
+            </select>
+            {errors.dgCapacity && <span className="text-[10px] text-destructive">{errors.dgCapacity}</span>}
+            {form.dgCapacity && (
+              <span className="text-[10px] text-muted-foreground">
+                Rate: {DG_CAPACITIES[form.dgCapacity]?.label} (Hour-based)
+              </span>
+            )}
+          </div>
+        )}
 
         <SelectField
           label="Company / Private"
@@ -185,7 +212,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           onChange={v => handleChange('vehicleOwnership', v)}
         />
 
-        {/* Vehicle No with auto-fill on blur */}
+        {/* Vehicle No */}
         <div className="flex flex-col gap-1">
           <label className="label-uppercase flex items-center gap-1">
             Vehicle No

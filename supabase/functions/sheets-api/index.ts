@@ -80,11 +80,10 @@ async function ensureSheet(sheetName: string) {
           requests: [{ addSheet: { properties: { title: sheetName } } }],
         }),
       });
-      // Add headers for FuelPurchases sheet
       if (sheetName === 'FuelPurchases') {
-        await sheetsRequest('/values/FuelPurchases!A1:C1?valueInputOption=USER_ENTERED', {
+        await sheetsRequest('/values/FuelPurchases!A1:E1?valueInputOption=USER_ENTERED', {
           method: 'PUT',
-          body: JSON.stringify({ values: [['Fuel Purchased Date', 'Liters Purchased', 'Opening Balance']] }),
+          body: JSON.stringify({ values: [['Fuel Purchased Date', 'Liters Purchased', 'Site Location', 'Fuel Type', 'Opening Balance']] }),
         });
       }
     }
@@ -99,26 +98,21 @@ async function getSheetId(sheetName: string): Promise<number> {
   return sheet?.properties?.sheetId || 0;
 }
 
-// Get the last entry for a specific vehicle number from Sheet1
 async function getVehicleLastEntry(vehicleNo: string) {
-  const data = await sheetsRequest('/values/Sheet1!A2:O');
+  const data = await sheetsRequest('/values/Sheet1!A2:Q');
   const rows: string[][] = data.values || [];
-  // Vehicle No is column index 6 (G)
   let lastRow: string[] | null = null;
-  let lastIndex = -1;
   for (let i = 0; i < rows.length; i++) {
     if (rows[i][6]?.toLowerCase() === vehicleNo.toLowerCase()) {
       lastRow = rows[i];
-      lastIndex = i;
     }
   }
-  return lastRow ? { row: lastRow, index: lastIndex } : null;
+  return lastRow ? { row: lastRow } : null;
 }
 
-// Calculate running opening balance and update the column in FuelPurchases
 async function updateOpeningBalance(totalAlloted: number) {
   try {
-    const data = await sheetsRequest('/values/FuelPurchases!A2:B');
+    const data = await sheetsRequest('/values/FuelPurchases!A2:D');
     const rows: string[][] = data.values || [];
     if (rows.length === 0) return;
 
@@ -129,8 +123,7 @@ async function updateOpeningBalance(totalAlloted: number) {
       balances.push([String(runningTotal - totalAlloted)]);
     }
 
-    // Write opening balance column (C2:C)
-    await sheetsRequest(`/values/FuelPurchases!C2:C${rows.length + 1}?valueInputOption=USER_ENTERED`, {
+    await sheetsRequest(`/values/FuelPurchases!E2:E${rows.length + 1}?valueInputOption=USER_ENTERED`, {
       method: 'PUT',
       body: JSON.stringify({ values: balances }),
     });
@@ -157,15 +150,14 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
-    // === GET actions ===
     if (req.method === 'GET') {
       if (action === 'get') {
-        const data = await sheetsRequest('/values/Sheet1!A2:O');
+        const data = await sheetsRequest('/values/Sheet1!A2:Q');
         return json({ rows: data.values || [] });
       }
       if (action === 'get_purchases') {
         await ensureSheet('FuelPurchases');
-        const data = await sheetsRequest('/values/FuelPurchases!A2:C');
+        const data = await sheetsRequest('/values/FuelPurchases!A2:E');
         return json({ rows: data.values || [] });
       }
       if (action === 'get_vehicle_last') {
@@ -176,16 +168,14 @@ serve(async (req) => {
       }
     }
 
-    // === POST actions ===
     if (req.method === 'POST') {
       const body = await req.json();
 
       if (body.action === 'append') {
-        await sheetsRequest('/values/Sheet1!A2:O:append?valueInputOption=USER_ENTERED', {
+        await sheetsRequest('/values/Sheet1!A2:Q:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
-        // After appending vehicle data, update opening balances
         try {
           const vData = await sheetsRequest('/values/Sheet1!H2:H');
           const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
@@ -195,7 +185,7 @@ serve(async (req) => {
       }
 
       if (body.action === 'update') {
-        const range = `Sheet1!A${body.rowIndex}:O${body.rowIndex}`;
+        const range = `Sheet1!A${body.rowIndex}:Q${body.rowIndex}`;
         await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
           body: JSON.stringify({ values: [body.row] }),
@@ -220,12 +210,10 @@ serve(async (req) => {
 
       if (body.action === 'append_purchase') {
         await ensureSheet('FuelPurchases');
-        // Append date + liters (opening balance will be calculated)
-        await sheetsRequest('/values/FuelPurchases!A2:B:append?valueInputOption=USER_ENTERED', {
+        await sheetsRequest('/values/FuelPurchases!A2:D:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
-        // Calculate and write opening balances
         try {
           const vData = await sheetsRequest('/values/Sheet1!H2:H');
           const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
@@ -247,7 +235,6 @@ serve(async (req) => {
             }],
           }),
         });
-        // Recalculate opening balances after delete
         try {
           const vData = await sheetsRequest('/values/Sheet1!H2:H');
           const totalAlloted = (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);

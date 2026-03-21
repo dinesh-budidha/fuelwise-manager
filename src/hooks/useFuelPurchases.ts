@@ -38,9 +38,9 @@ export function useFuelPurchases() {
     }
   }, []);
 
-  const addPurchase = useCallback(async (date: string, liters: number) => {
+  const addPurchase = useCallback(async (date: string, liters: number, site: string, fuelType: string) => {
     try {
-      await apiFetch('append_purchase', { row: purchaseToRow({ date, liters }) });
+      await apiFetch('append_purchase', { row: purchaseToRow({ date, liters, site, fuelType }) });
       toast({ title: 'Purchase recorded' });
       await fetchPurchases();
       return true;
