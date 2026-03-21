@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, RefreshCw, Fuel, Truck } from 'lucide-react';
+import { Search, RefreshCw, Fuel, Truck, MapPin } from 'lucide-react';
 import { useFuelData } from '@/hooks/useFuelData';
 import { useFuelPurchases } from '@/hooks/useFuelPurchases';
 import { FuelRecord, FuelFormData } from '@/types/fuel';
@@ -25,6 +25,7 @@ export default function Index() {
   const [activeTab, setActiveTab] = useState<'vehicle' | 'purchase'>('vehicle');
   const [filterVehicle, setFilterVehicle] = useState('');
   const [filterSite, setFilterSite] = useState('');
+  const [globalSite, setGlobalSite] = useState('');
 
   useEffect(() => {
     fetchRecords();
@@ -57,10 +58,17 @@ export default function Index() {
 
   const totalAlloted = allRecords.reduce((s, r) => s + r.fuelAlloted, 0);
 
-  const uniqueVehicles = [...new Set(allRecords.map(r => r.vehicleNo).filter(Boolean))];
-  const uniqueSites = [...new Set(allRecords.map(r => r.siteName).filter(Boolean))];
+  // Collect all unique sites from both records and purchases
+  const allSites = [...new Set([
+    ...allRecords.map(r => r.siteName).filter(Boolean),
+    ...purchases.map(p => p.site).filter(Boolean),
+  ])].sort();
 
-  const filteredRecords = records.filter(r => {
+  const uniqueVehicles = [...new Set(allRecords.map(r => r.vehicleNo).filter(Boolean))];
+
+  // Apply global site filter then local filters
+  const globalFiltered = globalSite ? records.filter(r => r.siteName === globalSite) : records;
+  const filteredRecords = globalFiltered.filter(r => {
     if (filterVehicle && r.vehicleNo !== filterVehicle) return false;
     if (filterSite && r.siteName !== filterSite) return false;
     return true;
@@ -68,10 +76,28 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
+      {/* Company Header */}
+      <div className="max-w-[1600px] mx-auto mb-6 text-center">
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+          SRI KEERTHI PROJECTS PVT. LTD.
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">Fuel Consumption Tracking</p>
+      </div>
+
       <header className="max-w-[1600px] mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Fuel Operations</h1>
-          <p className="text-muted-foreground text-sm">Fleet telemetry and consumption tracking</p>
+        <div className="flex items-center gap-3">
+          {/* Global Site Filter */}
+          <div className="flex items-center gap-2">
+            <MapPin size={14} className="text-muted-foreground" />
+            <select
+              value={globalSite}
+              onChange={e => setGlobalSite(e.target.value)}
+              className="input-recessed text-sm min-w-[160px]"
+            >
+              <option value="">All Sites</option>
+              {allSites.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleRefresh} className="btn-secondary flex items-center gap-2" disabled={loading}>
@@ -82,7 +108,13 @@ export default function Index() {
       </header>
 
       <main className="max-w-[1600px] mx-auto space-y-6">
-        <DashboardSummary records={allRecords} totalPurchased={totalPurchased} totalAlloted={totalAlloted} />
+        <DashboardSummary
+          records={allRecords}
+          purchases={purchases}
+          totalPurchased={totalPurchased}
+          totalAlloted={totalAlloted}
+          selectedSite={globalSite}
+        />
 
         <div className="card-raised p-1 flex gap-1 w-fit">
           <button
@@ -131,7 +163,7 @@ export default function Index() {
                 </select>
                 <select value={filterSite} onChange={e => setFilterSite(e.target.value)} className="input-recessed text-xs min-w-[120px]">
                   <option value="">All Sites</option>
-                  {uniqueSites.map(s => <option key={s} value={s}>{s}</option>)}
+                  {allSites.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {filteredRecords.length} of {allRecords.length} records
@@ -143,14 +175,15 @@ export default function Index() {
         )}
 
         {activeTab === 'purchase' && (
-          <div className="max-w-2xl">
+          <div className="max-w-3xl">
             <FuelPurchaseForm
-              purchases={purchases}
+              purchases={globalSite ? purchases.filter(p => p.site === globalSite) : purchases}
               loading={purchasesLoading}
               onAdd={addPurchase}
               onDelete={deletePurchase}
               totalPurchased={totalPurchased}
               totalAlloted={totalAlloted}
+              siteOptions={allSites}
             />
           </div>
         )}

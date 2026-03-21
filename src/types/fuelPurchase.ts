@@ -2,10 +2,12 @@ export interface FuelPurchase {
   id: string;
   date: string;
   liters: number;
+  site: string;
+  fuelType: string;
 }
 
 export function purchaseToRow(p: Omit<FuelPurchase, 'id'>): string[] {
-  return [p.date, String(p.liters)];
+  return [p.date, String(p.liters), p.site || '', p.fuelType || 'Diesel'];
 }
 
 export function rowToPurchase(row: string[], index: number): FuelPurchase {
@@ -13,5 +15,7 @@ export function rowToPurchase(row: string[], index: number): FuelPurchase {
     id: `purchase-${index}`,
     date: row[0] || '',
     liters: Number(row[1]) || 0,
+    site: row[2] || '',
+    fuelType: row[3] || 'Diesel',
   };
 }

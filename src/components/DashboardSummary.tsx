@@ -1,23 +1,33 @@
 import { FuelRecord } from '@/types/fuel';
+import { FuelPurchase } from '@/types/fuelPurchase';
 import { Fuel, Truck, MapPin, Gauge, Droplets, AlertTriangle, Package } from 'lucide-react';
 
 interface Props {
   records: FuelRecord[];
+  purchases: FuelPurchase[];
   totalPurchased: number;
   totalAlloted: number;
+  selectedSite: string;
 }
 
-export default function DashboardSummary({ records, totalPurchased, totalAlloted }: Props) {
-  const totalUsed = records.reduce((s, r) => s + r.usedInLtrs, 0);
-  const totalKm = records.reduce((s, r) => s + r.kilometers, 0);
-  const uniqueVehicles = new Set(records.map(r => r.vehicleNo).filter(Boolean)).size;
-  const uniqueSites = new Set(records.map(r => r.siteName).filter(Boolean)).size;
-  const openingBalance = totalPurchased - totalAlloted;
-  const isLowBalance = openingBalance < 100 && totalPurchased > 0;
+export default function DashboardSummary({ records, purchases, totalPurchased, totalAlloted, selectedSite }: Props) {
+  // Filter by site if selected
+  const siteRecords = selectedSite ? records.filter(r => r.siteName === selectedSite) : records;
+  const sitePurchases = selectedSite ? purchases.filter(p => p.site === selectedSite) : purchases;
+
+  const sitePurchased = sitePurchases.reduce((s, p) => s + p.liters, 0);
+  const siteAlloted = siteRecords.reduce((s, r) => s + r.fuelAlloted, 0);
+  const openingBalance = sitePurchased - siteAlloted;
+
+  const totalUsed = siteRecords.reduce((s, r) => s + r.usedInLtrs, 0);
+  const totalKm = siteRecords.reduce((s, r) => s + r.kilometers, 0);
+  const uniqueVehicles = new Set(siteRecords.map(r => r.vehicleNo).filter(Boolean)).size;
+  const uniqueSites = new Set(siteRecords.map(r => r.siteName).filter(Boolean)).size;
+  const isLowBalance = openingBalance < 100 && sitePurchased > 0;
 
   const stats = [
-    { label: 'Total Purchased', value: `${totalPurchased.toLocaleString()} L`, icon: Droplets, accent: 'text-primary' },
-    { label: 'Total Alloted', value: `${totalAlloted.toLocaleString()} L`, icon: Package, accent: 'text-foreground' },
+    { label: 'Total Purchased', value: `${sitePurchased.toLocaleString()} L`, icon: Droplets, accent: 'text-primary' },
+    { label: 'Total Alloted', value: `${siteAlloted.toLocaleString()} L`, icon: Package, accent: 'text-foreground' },
     { label: 'Total Used', value: `${totalUsed.toLocaleString()} L`, icon: Fuel, accent: 'text-foreground' },
     { label: 'Total Distance', value: `${totalKm.toLocaleString()} km`, icon: Gauge, accent: 'text-foreground' },
     { label: 'Vehicles', value: uniqueVehicles, icon: Truck, accent: 'text-foreground' },
@@ -30,14 +40,14 @@ export default function DashboardSummary({ records, totalPurchased, totalAlloted
       <div className={`card-raised p-5 flex items-center justify-between ${isLowBalance ? 'ring-2 ring-destructive/50' : ''}`}>
         <div>
           <div className="label-uppercase mb-1 flex items-center gap-1.5">
-            Opening Balance
+            Opening Balance {selectedSite && <span className="text-primary">({selectedSite})</span>}
             {isLowBalance && <AlertTriangle size={12} className="text-destructive" />}
           </div>
           <div className={`text-3xl font-bold tabular-nums ${isLowBalance ? 'text-destructive' : 'text-primary'}`}>
             {openingBalance.toLocaleString()} L
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {totalPurchased.toLocaleString()} purchased − {totalAlloted.toLocaleString()} alloted
+            {sitePurchased.toLocaleString()} purchased − {siteAlloted.toLocaleString()} alloted
           </div>
         </div>
         {isLowBalance && (

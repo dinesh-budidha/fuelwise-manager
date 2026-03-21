@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { FuelRecord } from '@/types/fuel';
+import { toIndianDate } from '@/lib/dateUtils';
 import { Edit3, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 interface Props {
@@ -27,6 +23,7 @@ const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'siteName', label: 'Site' },
   { key: 'vehicleNo', label: 'Vehicle No' },
   { key: 'vehicleType', label: 'Type' },
+  { key: 'fuelType', label: 'Fuel' },
   { key: 'vehicleOwnership', label: 'Own.' },
   { key: 'issuedDate', label: 'Date' },
   { key: 'fuelAlloted', label: 'Fuel Allot.', numeric: true },
@@ -96,13 +93,13 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <tbody className="divide-y divide-border/50">
             {loading ? (
               <tr>
-                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
                   Loading records...
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={15} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
                   No records found
                 </td>
               </tr>
@@ -114,7 +111,8 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                     <td className="td-cell font-medium">{rec.slNo}</td>
                     <td className="td-cell">{rec.siteName}</td>
                     <td className="td-cell tabular-nums font-medium">{rec.vehicleNo}</td>
-                    <td className="td-cell">{rec.vehicleType}</td>
+                    <td className="td-cell">{rec.vehicleType}{rec.dgCapacity ? ` (${rec.dgCapacity})` : ''}</td>
+                    <td className="td-cell">{rec.fuelType}</td>
                     <td className="td-cell">
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                         rec.vehicleOwnership === 'Company' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
@@ -122,7 +120,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                         {rec.vehicleOwnership === 'Company' ? 'CO' : 'PV'}
                       </span>
                     </td>
-                    <td className="td-cell text-muted-foreground">{rec.issuedDate}</td>
+                    <td className="td-cell text-muted-foreground">{toIndianDate(rec.issuedDate)}</td>
                     <td className="td-cell text-right tabular-nums">{rec.fuelAlloted}</td>
                     <td className="td-cell text-right tabular-nums">{rec.startingReading}</td>
                     <td className="td-cell text-right tabular-nums">{rec.endingReading}</td>
@@ -162,7 +160,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Record</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove this record from Google Sheets. This action cannot be undone.
+              This will permanently remove this record. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
 import { FuelPurchase } from '@/types/fuelPurchase';
+import { FUEL_TYPES } from '@/types/fuel';
+import { toIndianDate } from '@/lib/dateUtils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -10,23 +12,28 @@ import {
 interface Props {
   purchases: FuelPurchase[];
   loading: boolean;
-  onAdd: (date: string, liters: number) => Promise<boolean>;
+  onAdd: (date: string, liters: number, site: string, fuelType: string) => Promise<boolean>;
   onDelete: (index: number) => Promise<boolean>;
   totalPurchased: number;
   totalAlloted: number;
+  siteOptions: string[];
 }
 
-export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalAlloted }: Props) {
+export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalAlloted, siteOptions }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState<number>(0);
+  const [site, setSite] = useState('');
+  const [fuelType, setFuelType] = useState('Diesel');
   const [submitting, setSubmitting] = useState(false);
   const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
+  const [filterSite, setFilterSite] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || liters <= 0) return;
+    if (!date || liters <= 0 || !site.trim()) return;
     setSubmitting(true);
-    const success = await onAdd(date, liters);
+    const success = await onAdd(date, liters, site.trim(), fuelType);
     if (success) {
       setLiters(0);
       setDate(new Date().toISOString().split('T')[0]);
@@ -41,7 +48,19 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
     }
   };
 
-  // Running balance per row
+  const filteredPurchases = purchases.filter(p => {
+    if (filterSite && p.site !== filterSite) return false;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      return (
+        p.date.toLowerCase().includes(term) ||
+        p.site.toLowerCase().includes(term) ||
+        p.fuelType.toLowerCase().includes(term)
+      );
+    }
+    return true;
+  });
+
   let runningTotal = 0;
 
   return (
@@ -50,12 +69,12 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
         <Plus size={14} className="text-primary" /> FUEL PURCHASE ENTRY
       </h2>
 
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
+        <div className="flex flex-col gap-1">
           <label className="label-uppercase">Purchase Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} className="input-recessed" />
         </div>
-        <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
+        <div className="flex flex-col gap-1">
           <label className="label-uppercase">Liters Purchased</label>
           <input
             type="number" step="any" min="0"
@@ -64,12 +83,52 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
             className="input-recessed tabular-nums"
           />
         </div>
-        <button type="submit" disabled={submitting || liters <= 0} className="btn-primary py-2 px-4 disabled:opacity-50">
+        <div className="flex flex-col gap-1">
+          <label className="label-uppercase">Site Location *</label>
+          <input
+            list="purchase-sites"
+            value={site}
+            onChange={e => setSite(e.target.value)}
+            className="input-recessed"
+            placeholder="Select or type site"
+            required
+          />
+          <datalist id="purchase-sites">
+            {siteOptions.map(s => <option key={s} value={s} />)}
+          </datalist>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="label-uppercase">Fuel Type</label>
+          <select value={fuelType} onChange={e => setFuelType(e.target.value)} className="input-recessed">
+            {FUEL_TYPES.map(ft => <option key={ft} value={ft}>{ft}</option>)}
+          </select>
+        </div>
+        <button type="submit" disabled={submitting || liters <= 0 || !site.trim()} className="btn-primary py-2 px-4 disabled:opacity-50">
           {submitting ? 'Saving...' : 'Add Purchase'}
         </button>
       </form>
 
-      {/* Purchase History with Opening Balance */}
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+          <input
+            placeholder="Search date, site, fuel type..."
+            className="input-recessed w-full pl-9"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <select value={filterSite} onChange={e => setFilterSite(e.target.value)} className="input-recessed text-xs min-w-[120px]">
+          <option value="">All Sites</option>
+          {siteOptions.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {filteredPurchases.length} of {purchases.length} records
+        </span>
+      </div>
+
+      {/* Purchase History */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <span className="label-uppercase">Purchase History</span>
@@ -80,7 +139,7 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
 
         {loading ? (
           <p className="text-sm text-muted-foreground py-3">Loading...</p>
-        ) : purchases.length === 0 ? (
+        ) : filteredPurchases.length === 0 ? (
           <p className="text-sm text-muted-foreground py-3">No purchases recorded yet</p>
         ) : (
           <div className="max-h-[300px] overflow-y-auto border border-border rounded">
@@ -88,25 +147,30 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
               <thead>
                 <tr className="bg-muted/50 border-b border-border">
                   <th className="th-header">Date</th>
+                  <th className="th-header">Site</th>
+                  <th className="th-header">Fuel Type</th>
                   <th className="th-header text-right">Liters</th>
                   <th className="th-header text-right">Opening Balance</th>
                   <th className="th-header text-center w-12"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {purchases.map((p, i) => {
+                {filteredPurchases.map((p, i) => {
                   runningTotal += p.liters;
                   const openingBal = runningTotal - totalAlloted;
+                  const origIdx = purchases.findIndex(op => op.id === p.id);
                   return (
                     <tr key={p.id} className="hover:bg-primary/[0.03] group">
-                      <td className="td-cell text-muted-foreground">{p.date}</td>
+                      <td className="td-cell text-muted-foreground">{toIndianDate(p.date)}</td>
+                      <td className="td-cell">{p.site}</td>
+                      <td className="td-cell">{p.fuelType}</td>
                       <td className="td-cell text-right tabular-nums font-medium">{p.liters.toLocaleString()}</td>
                       <td className={`td-cell text-right tabular-nums font-medium ${openingBal < 100 ? 'text-destructive' : 'text-primary'}`}>
                         {openingBal.toLocaleString()} L
                       </td>
                       <td className="td-cell text-center">
                         <button
-                          onClick={() => setDeleteIdx(i)}
+                          onClick={() => setDeleteIdx(origIdx)}
                           className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
                         >
                           <Trash2 size={12} />
