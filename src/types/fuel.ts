@@ -17,17 +17,22 @@ export interface FuelRecord {
   balanceLiters: number;
   fuelType: string;
   dgCapacity: string;
+  issuedThrough: string;
+  issuedThroughValue: string;
 }
 
 export type FuelFormData = Omit<FuelRecord, 'id'>;
 
 export const FUEL_TYPES = ['Diesel', 'Petrol'] as const;
 
+export const ISSUED_THROUGH_OPTIONS = ['Barrel', 'Indent Number'] as const;
+
 // Vehicle type configuration
 export interface VehicleConfig {
   type: 'km' | 'hour';
   rate: number;
   label: string;
+  manualMileage?: boolean;
 }
 
 export const VEHICLE_DEFAULTS: Record<string, VehicleConfig> = {
@@ -40,8 +45,8 @@ export const VEHICLE_DEFAULTS: Record<string, VehicleConfig> = {
   'Roller': { type: 'hour', rate: 8, label: '8 Ltrs/Hr' },
   'JCB': { type: 'hour', rate: 5, label: '5 Ltrs/Hr' },
   'Excavator': { type: 'hour', rate: 14, label: '14 Ltrs/Hr' },
-  '2 Wheeler': { type: 'km', rate: 40, label: '40 Km/Ltr' },
-  'Car': { type: 'km', rate: 12, label: '12 Km/Ltr' },
+  '2 Wheeler': { type: 'km', rate: 40, label: '40 Km/Ltr', manualMileage: true },
+  'Car': { type: 'km', rate: 12, label: '12 Km/Ltr', manualMileage: true },
   'Diesel Generator': { type: 'hour', rate: 3, label: 'Select DG Capacity' },
 };
 
@@ -69,6 +74,10 @@ export function getDGRate(dgCapacity: string): number {
   return DG_CAPACITIES[dgCapacity]?.rate || 3;
 }
 
+export function isManualMileage(vehicleType: string): boolean {
+  return VEHICLE_DEFAULTS[vehicleType]?.manualMileage === true;
+}
+
 export const EMPTY_FORM: FuelFormData = {
   slNo: '',
   siteName: '',
@@ -87,6 +96,8 @@ export const EMPTY_FORM: FuelFormData = {
   balanceLiters: 0,
   fuelType: 'Diesel',
   dgCapacity: '',
+  issuedThrough: '',
+  issuedThroughValue: '',
 };
 
 export const COLUMNS = [
@@ -94,6 +105,7 @@ export const COLUMNS = [
   'Company/Private', 'Vehicle Type', 'Vehicle No', 'Fuel Alloted',
   'Starting Reading', 'Ending Reading', 'Kilometers', 'Hours',
   'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'Fuel Type', 'DG Capacity',
+  'Issued Through', 'Issued Through Value',
 ] as const;
 
 export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData, 'kilometers' | 'kmPerLtr' | 'usedInLtrs' | 'balanceLiters'> {
@@ -108,6 +120,10 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
       const dgRate = getDGRate(data.dgCapacity);
       kmPerLtr = dgRate;
       usedInLtrs = Number(((data.hours || 0) * dgRate).toFixed(2));
+    } else if (config.manualMileage) {
+      // For Car/2 Wheeler, use manually entered kmPerLtr
+      kmPerLtr = data.kmPerLtr || config.rate;
+      usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
     } else if (config.type === 'km') {
       kmPerLtr = config.rate;
       usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
@@ -141,6 +157,8 @@ export function recordToRow(record: FuelFormData): string[] {
     String(record.balanceLiters),
     record.fuelType || 'Diesel',
     record.dgCapacity || '',
+    record.issuedThrough || '',
+    record.issuedThroughValue || '',
   ];
 }
 
@@ -164,5 +182,7 @@ export function rowToRecord(row: string[], index: number): FuelRecord {
     balanceLiters: Number(row[14]) || 0,
     fuelType: row[15] || 'Diesel',
     dgCapacity: row[16] || '',
+    issuedThrough: row[17] || '',
+    issuedThroughValue: row[18] || '',
   };
 }

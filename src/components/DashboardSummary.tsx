@@ -1,6 +1,6 @@
 import { FuelRecord } from '@/types/fuel';
 import { FuelPurchase } from '@/types/fuelPurchase';
-import { Fuel, Truck, MapPin, Gauge, Droplets, AlertTriangle, Package } from 'lucide-react';
+import { Fuel, Truck, MapPin, Gauge, Droplets, AlertTriangle, Package, Clock } from 'lucide-react';
 
 interface Props {
   records: FuelRecord[];
@@ -11,7 +11,6 @@ interface Props {
 }
 
 export default function DashboardSummary({ records, purchases, totalPurchased, totalAlloted, selectedSite }: Props) {
-  // Filter by site if selected
   const siteRecords = selectedSite ? records.filter(r => r.siteName === selectedSite) : records;
   const sitePurchases = selectedSite ? purchases.filter(p => p.site === selectedSite) : purchases;
 
@@ -21,6 +20,7 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
 
   const totalUsed = siteRecords.reduce((s, r) => s + r.usedInLtrs, 0);
   const totalKm = siteRecords.reduce((s, r) => s + r.kilometers, 0);
+  const totalHours = siteRecords.reduce((s, r) => s + r.hours, 0);
   const uniqueVehicles = new Set(siteRecords.map(r => r.vehicleNo).filter(Boolean)).size;
   const uniqueSites = new Set(siteRecords.map(r => r.siteName).filter(Boolean)).size;
   const isLowBalance = openingBalance < 100 && sitePurchased > 0;
@@ -30,13 +30,13 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
     { label: 'Total Alloted', value: `${siteAlloted.toLocaleString()} L`, icon: Package, accent: 'text-foreground' },
     { label: 'Total Used', value: `${totalUsed.toLocaleString()} L`, icon: Fuel, accent: 'text-foreground' },
     { label: 'Total Distance', value: `${totalKm.toLocaleString()} km`, icon: Gauge, accent: 'text-foreground' },
+    { label: 'Total Hours', value: `${totalHours.toLocaleString()} hrs`, icon: Clock, accent: 'text-foreground' },
     { label: 'Vehicles', value: uniqueVehicles, icon: Truck, accent: 'text-foreground' },
     { label: 'Sites', value: uniqueSites, icon: MapPin, accent: 'text-foreground' },
   ];
 
   return (
     <div className="space-y-3">
-      {/* Opening Balance - Hero Card */}
       <div className={`card-raised p-5 flex items-center justify-between ${isLowBalance ? 'ring-2 ring-destructive/50' : ''}`}>
         <div>
           <div className="label-uppercase mb-1 flex items-center gap-1.5">
@@ -57,8 +57,7 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
         )}
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-7 gap-3">
         {stats.map(s => (
           <div key={s.label} className="card-raised p-4 flex items-center gap-3">
             <div className="p-2 rounded bg-muted">

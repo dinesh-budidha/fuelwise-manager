@@ -58,7 +58,15 @@ export default function Index() {
 
   const totalAlloted = allRecords.reduce((s, r) => s + r.fuelAlloted, 0);
 
-  // Collect all unique sites from both records and purchases
+  // Build site-wise alloted map
+  const siteAllotedMap: Record<string, number> = {};
+  allRecords.forEach(r => {
+    if (r.siteName) {
+      siteAllotedMap[r.siteName] = (siteAllotedMap[r.siteName] || 0) + r.fuelAlloted;
+    }
+  });
+
+  // Collect all unique sites
   const allSites = [...new Set([
     ...allRecords.map(r => r.siteName).filter(Boolean),
     ...purchases.map(p => p.site).filter(Boolean),
@@ -74,6 +82,10 @@ export default function Index() {
     return true;
   });
 
+  // Purchases filtered by global site
+  const displayedPurchases = globalSite ? purchases.filter(p => p.site === globalSite) : purchases;
+  const displayedTotalPurchased = displayedPurchases.reduce((s, p) => s + p.liters, 0);
+
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
       {/* Company Header */}
@@ -86,7 +98,6 @@ export default function Index() {
 
       <header className="max-w-[1600px] mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div className="flex items-center gap-3">
-          {/* Global Site Filter */}
           <div className="flex items-center gap-2">
             <MapPin size={14} className="text-muted-foreground" />
             <select
@@ -177,13 +188,16 @@ export default function Index() {
         {activeTab === 'purchase' && (
           <div className="max-w-3xl">
             <FuelPurchaseForm
-              purchases={globalSite ? purchases.filter(p => p.site === globalSite) : purchases}
+              purchases={displayedPurchases}
+              allPurchases={purchases}
               loading={purchasesLoading}
               onAdd={addPurchase}
               onDelete={deletePurchase}
-              totalPurchased={totalPurchased}
+              totalPurchased={displayedTotalPurchased}
               totalAlloted={totalAlloted}
+              siteAllotedMap={siteAllotedMap}
               siteOptions={allSites}
+              selectedSite={globalSite}
             />
           </div>
         )}
