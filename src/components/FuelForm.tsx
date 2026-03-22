@@ -260,9 +260,9 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           </select>
         </div>
 
-        {form.issuedThrough && (
+        {form.issuedThrough === 'Indent Number' && (
           <Field
-            label={form.issuedThrough === 'Barrel' ? 'Barrel No.' : 'Indent Number'}
+            label="Indent Number"
             value={form.issuedThroughValue}
             onChange={v => handleChange('issuedThroughValue', v)}
           />
