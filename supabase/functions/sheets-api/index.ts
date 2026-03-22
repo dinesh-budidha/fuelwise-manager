@@ -99,7 +99,7 @@ async function getSheetId(sheetName: string): Promise<number> {
 }
 
 async function getVehicleLastEntry(vehicleNo: string) {
-  const data = await sheetsRequest('/values/Sheet1!A2:Q');
+  const data = await sheetsRequest('/values/Sheet1!A2:S');
   const rows: string[][] = data.values || [];
   let lastRow: string[] | null = null;
   for (let i = 0; i < rows.length; i++) {
