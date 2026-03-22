@@ -11,15 +11,18 @@ import {
 
 interface Props {
   purchases: FuelPurchase[];
+  allPurchases: FuelPurchase[];
   loading: boolean;
   onAdd: (date: string, liters: number, site: string, fuelType: string) => Promise<boolean>;
   onDelete: (index: number) => Promise<boolean>;
   totalPurchased: number;
   totalAlloted: number;
+  siteAllotedMap: Record<string, number>;
   siteOptions: string[];
+  selectedSite: string;
 }
 
-export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, totalPurchased, totalAlloted, siteOptions }: Props) {
+export default function FuelPurchaseForm({ purchases, allPurchases, loading, onAdd, onDelete, totalPurchased, totalAlloted, siteAllotedMap, siteOptions, selectedSite }: Props) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [liters, setLiters] = useState<number>(0);
   const [site, setSite] = useState('');
@@ -61,7 +64,9 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
     return true;
   });
 
-  let runningTotal = 0;
+  // Calculate site-wise running totals for opening balance
+  // Each site's balance = cumulative purchased for that site - total alloted for that site
+  const siteRunningTotals: Record<string, number> = {};
 
   return (
     <div className="card-raised p-5 space-y-4">
@@ -156,9 +161,14 @@ export default function FuelPurchaseForm({ purchases, loading, onAdd, onDelete, 
               </thead>
               <tbody className="divide-y divide-border/50">
                 {filteredPurchases.map((p, i) => {
-                  runningTotal += p.liters;
-                  const openingBal = runningTotal - totalAlloted;
-                  const origIdx = purchases.findIndex(op => op.id === p.id);
+                  // Running total per site independently
+                  const siteName = p.site;
+                  if (!siteRunningTotals[siteName]) siteRunningTotals[siteName] = 0;
+                  siteRunningTotals[siteName] += p.liters;
+                  const siteAlloted = siteAllotedMap[siteName] || 0;
+                  const openingBal = siteRunningTotals[siteName] - siteAlloted;
+                  
+                  const origIdx = allPurchases.findIndex(op => op.id === p.id);
                   return (
                     <tr key={p.id} className="hover:bg-primary/[0.03] group">
                       <td className="td-cell text-muted-foreground">{toIndianDate(p.date)}</td>

@@ -27,6 +27,8 @@ const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'vehicleOwnership', label: 'Own.' },
   { key: 'issuedDate', label: 'Date' },
   { key: 'fuelAlloted', label: 'Fuel Allot.', numeric: true },
+  { key: 'issuedThrough', label: 'Issued Via' },
+  { key: 'issuedThroughValue', label: 'Barrel/Indent' },
   { key: 'startingReading', label: 'Start', numeric: true },
   { key: 'endingReading', label: 'End', numeric: true },
   { key: 'kilometers', label: 'KMs', numeric: true },
@@ -70,7 +72,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
   return (
     <div className="card-raised overflow-hidden flex flex-col">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[1200px]">
+        <table className="w-full text-left border-collapse min-w-[1400px]">
           <thead>
             <tr className="bg-muted/50 border-b border-border">
               {COLS.map(col => (
@@ -93,13 +95,13 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <tbody className="divide-y divide-border/50">
             {loading ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={18} className="td-cell text-center text-muted-foreground py-12">
                   Loading records...
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={16} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={18} className="td-cell text-center text-muted-foreground py-12">
                   No records found
                 </td>
               </tr>
@@ -122,6 +124,8 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                     </td>
                     <td className="td-cell text-muted-foreground">{toIndianDate(rec.issuedDate)}</td>
                     <td className="td-cell text-right tabular-nums">{rec.fuelAlloted}</td>
+                    <td className="td-cell">{rec.issuedThrough || '—'}</td>
+                    <td className="td-cell">{rec.issuedThroughValue || '—'}</td>
                     <td className="td-cell text-right tabular-nums">{rec.startingReading}</td>
                     <td className="td-cell text-right tabular-nums">{rec.endingReading}</td>
                     <td className="td-cell text-right tabular-nums font-medium">{rec.kilometers}</td>

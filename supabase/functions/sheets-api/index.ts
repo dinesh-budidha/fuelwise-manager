@@ -99,7 +99,7 @@ async function getSheetId(sheetName: string): Promise<number> {
 }
 
 async function getVehicleLastEntry(vehicleNo: string) {
-  const data = await sheetsRequest('/values/Sheet1!A2:Q');
+  const data = await sheetsRequest('/values/Sheet1!A2:S');
   const rows: string[][] = data.values || [];
   let lastRow: string[] | null = null;
   for (let i = 0; i < rows.length; i++) {
@@ -152,7 +152,7 @@ serve(async (req) => {
 
     if (req.method === 'GET') {
       if (action === 'get') {
-        const data = await sheetsRequest('/values/Sheet1!A2:Q');
+        const data = await sheetsRequest('/values/Sheet1!A2:S');
         return json({ rows: data.values || [] });
       }
       if (action === 'get_purchases') {
@@ -172,7 +172,7 @@ serve(async (req) => {
       const body = await req.json();
 
       if (body.action === 'append') {
-        await sheetsRequest('/values/Sheet1!A2:Q:append?valueInputOption=USER_ENTERED', {
+        await sheetsRequest('/values/Sheet1!A2:S:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
@@ -185,7 +185,7 @@ serve(async (req) => {
       }
 
       if (body.action === 'update') {
-        const range = `Sheet1!A${body.rowIndex}:Q${body.rowIndex}`;
+        const range = `Sheet1!A${body.rowIndex}:S${body.rowIndex}`;
         await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
           body: JSON.stringify({ values: [body.row] }),

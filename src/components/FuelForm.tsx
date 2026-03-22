@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FuelFormData, EMPTY_FORM, calculateFields, VEHICLE_TYPES, VEHICLE_DEFAULTS, FUEL_TYPES, isHourBased, getVehicleConfig, DG_CAPACITIES, DG_CAPACITY_OPTIONS } from '@/types/fuel';
+import { FuelFormData, EMPTY_FORM, calculateFields, VEHICLE_TYPES, VEHICLE_DEFAULTS, FUEL_TYPES, isHourBased, isManualMileage, getVehicleConfig, DG_CAPACITIES, DG_CAPACITY_OPTIONS, ISSUED_THROUGH_OPTIONS } from '@/types/fuel';
 import { Plus, Save, X, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -29,9 +29,19 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
   }, [editData, nextSlNo]);
 
   useEffect(() => {
-    const calcs = calculateFields(form);
-    setForm(prev => ({ ...prev, ...calcs }));
-  }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType, form.dgCapacity]);
+    if (isManualMileage(form.vehicleType)) {
+      // For manual mileage vehicles, don't override kmPerLtr
+      const config = getVehicleConfig(form.vehicleType);
+      const kilometers = Math.max(0, form.endingReading - form.startingReading);
+      const kmPerLtr = form.kmPerLtr || config?.rate || 0;
+      const usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
+      const balanceLiters = Number((form.fuelAlloted - usedInLtrs).toFixed(2));
+      setForm(prev => ({ ...prev, kilometers, usedInLtrs, balanceLiters }));
+    } else {
+      const calcs = calculateFields(form);
+      setForm(prev => ({ ...prev, ...calcs }));
+    }
+  }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType, form.dgCapacity, form.kmPerLtr]);
 
   const handleVehicleTypeChange = (vehicleType: string) => {
     const config = getVehicleConfig(vehicleType);
@@ -39,6 +49,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
       ...prev,
       vehicleType,
       dgCapacity: vehicleType === 'Diesel Generator' ? prev.dgCapacity : '',
+      kmPerLtr: config?.manualMileage ? config.rate : (prev.kmPerLtr),
       ...(config?.type === 'hour' ? { startingReading: 0, endingReading: 0 } : { hours: 0 }),
     }));
     setErrors({});
@@ -135,6 +146,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
   const hourBased = isHourBased(form.vehicleType);
   const config = getVehicleConfig(form.vehicleType);
   const isDG = form.vehicleType === 'Diesel Generator';
+  const manualMileage = isManualMileage(form.vehicleType);
 
   return (
     <form onSubmit={handleSubmit} className="card-raised p-5">
@@ -158,7 +170,6 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
         <Field label="Site Name" value={form.siteName} onChange={v => handleChange('siteName', v)} error={errors.siteName} />
         <Field label="Issued Date" type="date" value={form.issuedDate} onChange={v => handleChange('issuedDate', v)} />
 
-        {/* Fuel Type */}
         <SelectField label="Fuel Type" value={form.fuelType} options={[...FUEL_TYPES]} onChange={v => handleChange('fuelType', v)} />
 
         {/* Vehicle Type */}
@@ -178,11 +189,12 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           {config && !isDG && (
             <span className="text-[10px] text-muted-foreground">
               Default: {config.label} ({config.type === 'km' ? 'KM-based' : 'Hour-based'})
+              {config.manualMileage && ' — Editable'}
             </span>
           )}
         </div>
 
-        {/* DG Capacity - only for Diesel Generator */}
+        {/* DG Capacity */}
         {isDG && (
           <div className="flex flex-col gap-1">
             <label className="label-uppercase">DG Capacity</label>
@@ -233,6 +245,29 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
         <NumField label="Fuel Alloted" value={form.fuelAlloted} onChange={v => handleChange('fuelAlloted', v)} error={errors.fuelAlloted} />
 
+        {/* Issued Through */}
+        <div className="flex flex-col gap-1">
+          <label className="label-uppercase">Issued Through</label>
+          <select
+            value={form.issuedThrough}
+            onChange={e => handleChange('issuedThrough', e.target.value)}
+            className="input-recessed"
+          >
+            <option value="">Select...</option>
+            {ISSUED_THROUGH_OPTIONS.map(o => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </div>
+
+        {form.issuedThrough && (
+          <Field
+            label={form.issuedThrough === 'Barrel' ? 'Barrel No.' : 'Indent Number'}
+            value={form.issuedThroughValue}
+            onChange={v => handleChange('issuedThroughValue', v)}
+          />
+        )}
+
         {!hourBased && (
           <>
             <NumField label="Starting Reading" value={form.startingReading} onChange={v => handleChange('startingReading', v)} />
@@ -245,10 +280,21 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
         )}
 
         {!hourBased && <ReadOnly label="Kilometers" value={form.kilometers} />}
-        <ReadOnly
-          label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
-          value={form.kmPerLtr}
-        />
+
+        {/* KM per Ltr - editable for Car/2 Wheeler, readonly for others */}
+        {manualMileage ? (
+          <NumField
+            label="KM per Ltr (Editable)"
+            value={form.kmPerLtr}
+            onChange={v => handleChange('kmPerLtr', v)}
+          />
+        ) : (
+          <ReadOnly
+            label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
+            value={form.kmPerLtr}
+          />
+        )}
+
         <ReadOnly label="Used in Ltrs" value={form.usedInLtrs} />
         <ReadOnly label="Balance Liters" value={form.balanceLiters} highlight={form.balanceLiters < 0} />
       </div>
