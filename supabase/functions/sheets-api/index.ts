@@ -172,7 +172,7 @@ serve(async (req) => {
       const body = await req.json();
 
       if (body.action === 'append') {
-        await sheetsRequest('/values/Sheet1!A2:Q:append?valueInputOption=USER_ENTERED', {
+        await sheetsRequest('/values/Sheet1!A2:S:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
