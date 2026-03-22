@@ -152,7 +152,7 @@ serve(async (req) => {
 
     if (req.method === 'GET') {
       if (action === 'get') {
-        const data = await sheetsRequest('/values/Sheet1!A2:Q');
+        const data = await sheetsRequest('/values/Sheet1!A2:S');
         return json({ rows: data.values || [] });
       }
       if (action === 'get_purchases') {
