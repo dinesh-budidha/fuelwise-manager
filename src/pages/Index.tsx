@@ -93,8 +93,8 @@ export default function Index() {
   
   <img
     src="/logo.png"
-    alt="Logo"
-    className="w-[90px] h-[90px] object-contain mb-2"
+    alt="SKPPL Logo"
+    className="w-[220px] lg:w-[300px] h-auto object-contain mb-3"
   />
 
   <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
