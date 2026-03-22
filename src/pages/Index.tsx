@@ -89,12 +89,23 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background p-4 lg:p-8">
       {/* Company Header */}
-      <div className="max-w-[1600px] mx-auto mb-6 text-center">
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
-          SRI KEERTHI PROJECTS PVT. LTD.
-        </h1>
-        <p className="text-muted-foreground mt-1 text-base">FUEL TRACKING</p>
-      </div>
+<div className="max-w-[1600px] mx-auto mb-6 text-center flex flex-col items-center">
+  
+  <img
+    src="/logo.png"
+    alt="Logo"
+    className="w-[90px] h-[90px] object-contain mb-2"
+  />
+
+  <h1 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+    SRI KEERTHI PROJECTS PVT. LTD.
+  </h1>
+
+  <p className="text-muted-foreground mt-1 text-base">
+    FUEL TRACKING
+  </p>
+
+</div>
 
       <header className="max-w-[1600px] mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div className="flex items-center gap-3">
