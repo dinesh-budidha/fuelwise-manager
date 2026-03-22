@@ -185,7 +185,7 @@ serve(async (req) => {
       }
 
       if (body.action === 'update') {
-        const range = `Sheet1!A${body.rowIndex}:Q${body.rowIndex}`;
+        const range = `Sheet1!A${body.rowIndex}:S${body.rowIndex}`;
         await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
           body: JSON.stringify({ values: [body.row] }),
