@@ -62,9 +62,9 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
     try {
       const lastRow = await onVehicleNoBlur(vehicleNo);
       if (lastRow) {
-        const prevEndingReading = Number(lastRow[9]) || 0;
-        const prevBalance = Number(lastRow[14]) || 0;
-        const prevVehicleType = lastRow[5] || '';
+        const prevEndingReading = Number(lastRow[11]) || 0;
+        const prevBalance = Number(lastRow[16]) || 0;
+        const prevVehicleType = lastRow[3] || '';
         const prevSite = lastRow[1] || '';
 
         setForm(prev => ({
