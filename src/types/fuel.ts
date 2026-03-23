@@ -139,25 +139,24 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
 
 export function recordToRow(record: FuelFormData): string[] {
   return [
-    record.slNo,
-    record.siteName,
-    String(record.litersPurchased),
-    record.issuedDate,
-    record.vehicleOwnership,
-    record.vehicleType,
-    record.vehicleNo,
-    String(record.fuelAlloted),
-    String(record.startingReading),
-    String(record.endingReading),
-    String(record.kilometers),
-    String(record.hours),
-    String(record.kmPerLtr),
-    String(record.usedInLtrs),
-    String(record.balanceLiters),
-    record.fuelType || 'Diesel',
-    record.dgCapacity || '',
-    record.issuedThrough || '',
-    record.issuedThroughValue || '',
+    record.slNo,                        // 0: Sl.No.
+    record.siteName,                     // 1: Site Name
+    record.vehicleNo,                    // 2: Vehicle No
+    record.vehicleType,                  // 3: Vehicle Type
+    record.fuelType || 'Diesel',         // 4: Fuel Type
+    record.vehicleOwnership,             // 5: Company/Private
+    record.issuedDate,                   // 6: Issued Date
+    String(record.fuelAlloted),          // 7: Fuel Alloted
+    record.issuedThrough || '',          // 8: Issued Through
+    record.issuedThroughValue || '',     // 9: Indent Number
+    String(record.startingReading),      // 10: Starting Reading
+    String(record.endingReading),        // 11: Ending Reading
+    String(record.kilometers),           // 12: Kilometers
+    String(record.hours),                // 13: Hours
+    String(record.kmPerLtr),             // 14: KM per Ltr
+    String(record.usedInLtrs),           // 15: Used in Ltrs
+    String(record.balanceLiters),        // 16: Balance Liters
+    record.dgCapacity || '',             // 17: DG Capacity
   ];
 }
 
