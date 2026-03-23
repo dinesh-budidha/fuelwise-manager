@@ -101,11 +101,10 @@ export const EMPTY_FORM: FuelFormData = {
 };
 
 export const COLUMNS = [
-  'Sl.No.', 'Site Name', 'Liters Purchased', 'Issued Date',
-  'Company/Private', 'Vehicle Type', 'Vehicle No', 'Fuel Alloted',
-  'Starting Reading', 'Ending Reading', 'Kilometers', 'Hours',
-  'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'Fuel Type', 'DG Capacity',
-  'Issued Through', 'Issued Through Value',
+  'Sl.No.', 'Site Name', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
+  'Company/Private', 'Issued Date', 'Fuel Alloted', 'Issued Through',
+  'Indent Number', 'Starting Reading', 'Ending Reading', 'Kilometers',
+  'Hours', 'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'DG Capacity',
 ] as const;
 
 export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData, 'kilometers' | 'kmPerLtr' | 'usedInLtrs' | 'balanceLiters'> {
