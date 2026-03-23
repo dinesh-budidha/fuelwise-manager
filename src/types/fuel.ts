@@ -25,7 +25,7 @@ export type FuelFormData = Omit<FuelRecord, 'id'>;
 
 export const FUEL_TYPES = ['Diesel', 'Petrol'] as const;
 
-export const ISSUED_THROUGH_OPTIONS = ['Barrel', 'Indent Number'] as const;
+export const ISSUED_THROUGH_OPTIONS = ['Barrel', 'Indent'] as const;
 
 // Vehicle type configuration
 export interface VehicleConfig {

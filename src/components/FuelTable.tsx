@@ -27,8 +27,8 @@ const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'vehicleOwnership', label: 'Own.' },
   { key: 'issuedDate', label: 'Date' },
   { key: 'fuelAlloted', label: 'Fuel Allot.', numeric: true },
-  { key: 'issuedThrough', label: 'Issued Via' },
-  { key: 'issuedThroughValue', label: 'Barrel/Indent' },
+  { key: 'issuedThrough', label: 'ISSUED THROUGH\n(BARREL/INDENT)' },
+  { key: 'issuedThroughValue', label: 'INDENT NO.' },
   { key: 'startingReading', label: 'Start', numeric: true },
   { key: 'endingReading', label: 'End', numeric: true },
   { key: 'kilometers', label: 'KMs', numeric: true },
@@ -79,7 +79,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className={`th-header cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap ${col.numeric ? 'text-right' : ''}`}
+                  className={`th-header cursor-pointer select-none hover:text-foreground transition-colors whitespace-pre-line ${col.numeric ? 'text-right' : ''}`}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.label}
