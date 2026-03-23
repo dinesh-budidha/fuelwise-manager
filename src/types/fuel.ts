@@ -101,11 +101,10 @@ export const EMPTY_FORM: FuelFormData = {
 };
 
 export const COLUMNS = [
-  'Sl.No.', 'Site Name', 'Liters Purchased', 'Issued Date',
-  'Company/Private', 'Vehicle Type', 'Vehicle No', 'Fuel Alloted',
-  'Starting Reading', 'Ending Reading', 'Kilometers', 'Hours',
-  'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'Fuel Type', 'DG Capacity',
-  'Issued Through', 'Issued Through Value',
+  'Sl.No.', 'Site Name', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
+  'Company/Private', 'Issued Date', 'Fuel Alloted', 'Issued Through',
+  'Indent Number', 'Starting Reading', 'Ending Reading', 'Kilometers',
+  'Hours', 'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'DG Capacity',
 ] as const;
 
 export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData, 'kilometers' | 'kmPerLtr' | 'usedInLtrs' | 'balanceLiters'> {
@@ -140,25 +139,24 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
 
 export function recordToRow(record: FuelFormData): string[] {
   return [
-    record.slNo,
-    record.siteName,
-    String(record.litersPurchased),
-    record.issuedDate,
-    record.vehicleOwnership,
-    record.vehicleType,
-    record.vehicleNo,
-    String(record.fuelAlloted),
-    String(record.startingReading),
-    String(record.endingReading),
-    String(record.kilometers),
-    String(record.hours),
-    String(record.kmPerLtr),
-    String(record.usedInLtrs),
-    String(record.balanceLiters),
-    record.fuelType || 'Diesel',
-    record.dgCapacity || '',
-    record.issuedThrough || '',
-    record.issuedThroughValue || '',
+    record.slNo,                        // 0: Sl.No.
+    record.siteName,                     // 1: Site Name
+    record.vehicleNo,                    // 2: Vehicle No
+    record.vehicleType,                  // 3: Vehicle Type
+    record.fuelType || 'Diesel',         // 4: Fuel Type
+    record.vehicleOwnership,             // 5: Company/Private
+    record.issuedDate,                   // 6: Issued Date
+    String(record.fuelAlloted),          // 7: Fuel Alloted
+    record.issuedThrough || '',          // 8: Issued Through
+    record.issuedThroughValue || '',     // 9: Indent Number
+    String(record.startingReading),      // 10: Starting Reading
+    String(record.endingReading),        // 11: Ending Reading
+    String(record.kilometers),           // 12: Kilometers
+    String(record.hours),                // 13: Hours
+    String(record.kmPerLtr),             // 14: KM per Ltr
+    String(record.usedInLtrs),           // 15: Used in Ltrs
+    String(record.balanceLiters),        // 16: Balance Liters
+    record.dgCapacity || '',             // 17: DG Capacity
   ];
 }
 
@@ -167,22 +165,22 @@ export function rowToRecord(row: string[], index: number): FuelRecord {
     id: `row-${index}`,
     slNo: row[0] || '',
     siteName: row[1] || '',
-    litersPurchased: Number(row[2]) || 0,
-    issuedDate: row[3] || '',
-    vehicleOwnership: (row[4] === 'Private' ? 'Private' : 'Company'),
-    vehicleType: row[5] || '',
-    vehicleNo: row[6] || '',
+    vehicleNo: row[2] || '',
+    vehicleType: row[3] || '',
+    fuelType: row[4] || 'Diesel',
+    vehicleOwnership: (row[5] === 'Private' ? 'Private' : 'Company'),
+    issuedDate: row[6] || '',
     fuelAlloted: Number(row[7]) || 0,
-    startingReading: Number(row[8]) || 0,
-    endingReading: Number(row[9]) || 0,
-    kilometers: Number(row[10]) || 0,
-    hours: Number(row[11]) || 0,
-    kmPerLtr: Number(row[12]) || 0,
-    usedInLtrs: Number(row[13]) || 0,
-    balanceLiters: Number(row[14]) || 0,
-    fuelType: row[15] || 'Diesel',
-    dgCapacity: row[16] || '',
-    issuedThrough: row[17] || '',
-    issuedThroughValue: row[18] || '',
+    issuedThrough: row[8] || '',
+    issuedThroughValue: row[9] || '',
+    startingReading: Number(row[10]) || 0,
+    endingReading: Number(row[11]) || 0,
+    kilometers: Number(row[12]) || 0,
+    hours: Number(row[13]) || 0,
+    kmPerLtr: Number(row[14]) || 0,
+    usedInLtrs: Number(row[15]) || 0,
+    balanceLiters: Number(row[16]) || 0,
+    dgCapacity: row[17] || '',
+    litersPurchased: 0,
   };
 }
