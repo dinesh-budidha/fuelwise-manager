@@ -28,7 +28,7 @@ const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'issuedDate', label: 'Date' },
   { key: 'fuelAlloted', label: 'Fuel Allot.', numeric: true },
   { key: 'issuedThrough', label: 'ISSUED THROUGH\n(BARREL/INDENT)' },
-  { key: 'issuedThroughValue', label: 'Indent' },
+  { key: 'issuedThroughValue', label: 'INDENT NUMBER' },
   { key: 'startingReading', label: 'Start', numeric: true },
   { key: 'endingReading', label: 'End', numeric: true },
   { key: 'kilometers', label: 'KMs', numeric: true },
