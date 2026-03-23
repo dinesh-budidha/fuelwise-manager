@@ -79,7 +79,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className={`th-header cursor-pointer select-none hover:text-foreground transition-colors whitespace-nowrap ${col.numeric ? 'text-right' : ''}`}
+                  className={`th-header cursor-pointer select-none hover:text-foreground transition-colors whitespace-pre-line ${col.numeric ? 'text-right' : ''}`}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.label}
