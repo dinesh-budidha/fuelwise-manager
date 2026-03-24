@@ -27,7 +27,6 @@ export const FUEL_TYPES = ['Diesel', 'Petrol'] as const;
 
 export const ISSUED_THROUGH_OPTIONS = ['Barrel', 'Indent'] as const;
 
-// Vehicle type configuration
 export interface VehicleConfig {
   type: 'km' | 'hour';
   rate: number;
@@ -120,7 +119,6 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
       kmPerLtr = dgRate;
       usedInLtrs = Number(((data.hours || 0) * dgRate).toFixed(2));
     } else if (config.manualMileage) {
-      // For Car/2 Wheeler, use manually entered kmPerLtr
       kmPerLtr = data.kmPerLtr || config.rate;
       usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
     } else if (config.type === 'km') {
@@ -138,7 +136,7 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
 }
 
 export function recordToRow(record: FuelFormData): string[] {
-  return [
+  const raw = [
     record.slNo,                        // 0: Sl.No.
     record.siteName,                     // 1: Site Name
     record.vehicleNo,                    // 2: Vehicle No
@@ -158,29 +156,41 @@ export function recordToRow(record: FuelFormData): string[] {
     String(record.balanceLiters),        // 16: Balance Liters
     record.dgCapacity || '',             // 17: DG Capacity
   ];
+  return raw;
+}
+
+// Helper to handle "-" from sheet as empty
+function str(val: string | undefined): string {
+  if (!val || val === '-') return '';
+  return val;
+}
+
+function num(val: string | undefined): number {
+  if (!val || val === '-') return 0;
+  return Number(val) || 0;
 }
 
 export function rowToRecord(row: string[], index: number): FuelRecord {
   return {
     id: `row-${index}`,
-    slNo: row[0] || '',
-    siteName: row[1] || '',
-    vehicleNo: row[2] || '',
-    vehicleType: row[3] || '',
-    fuelType: row[4] || 'Diesel',
+    slNo: str(row[0]),
+    siteName: str(row[1]),
+    vehicleNo: str(row[2]),
+    vehicleType: str(row[3]),
+    fuelType: str(row[4]) || 'Diesel',
     vehicleOwnership: (row[5] === 'Private' ? 'Private' : 'Company'),
-    issuedDate: row[6] || '',
-    fuelAlloted: Number(row[7]) || 0,
-    issuedThrough: row[8] || '',
-    issuedThroughValue: row[9] || '',
-    startingReading: Number(row[10]) || 0,
-    endingReading: Number(row[11]) || 0,
-    kilometers: Number(row[12]) || 0,
-    hours: Number(row[13]) || 0,
-    kmPerLtr: Number(row[14]) || 0,
-    usedInLtrs: Number(row[15]) || 0,
-    balanceLiters: Number(row[16]) || 0,
-    dgCapacity: row[17] || '',
+    issuedDate: str(row[6]),
+    fuelAlloted: num(row[7]),
+    issuedThrough: str(row[8]),
+    issuedThroughValue: str(row[9]),
+    startingReading: num(row[10]),
+    endingReading: num(row[11]),
+    kilometers: num(row[12]),
+    hours: num(row[13]),
+    kmPerLtr: num(row[14]),
+    usedInLtrs: num(row[15]),
+    balanceLiters: num(row[16]),
+    dgCapacity: str(row[17]),
     litersPurchased: 0,
   };
 }
