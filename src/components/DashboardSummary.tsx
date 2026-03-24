@@ -100,7 +100,7 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
 }
 
 function StatCard({ icon: Icon, label, value, accent }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<any>;
   label: string;
   value: string | number;
   accent?: string;
