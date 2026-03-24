@@ -40,7 +40,7 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
       {/* Opening Balance Cards - Diesel & Petrol side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Diesel Opening Balance */}
-        <div className={`card-raised p-5 flex items-center justify-between ${isDieselLow ? 'ring-2 ring-destructive/50' : ''}`}>
+        <div className={`card-raised bg-green-100 p-5 flex items-center justify-between ${isDieselLow ? 'ring-2 ring-destructive/50' : ''}`}>
           <div>
             <div className="label-uppercase mb-1 flex items-center gap-1.5">
               Opening Balance — Diesel {selectedSite && <span className="text-primary">({selectedSite})</span>}
@@ -61,7 +61,7 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
         </div>
 
         {/* Petrol Opening Balance */}
-        <div className={`card-raised p-5 flex items-center justify-between ${isPetrolLow ? 'ring-2 ring-destructive/50' : ''}`}>
+        <div className={`card-raised bg-yellow-100 p-5 flex items-center justify-between ${isPetrolLow ? 'ring-2 ring-destructive/50' : ''}`}>
           <div>
             <div className="label-uppercase mb-1 flex items-center gap-1.5">
               Opening Balance — Petrol {selectedSite && <span className="text-primary">({selectedSite})</span>}
@@ -84,12 +84,14 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
 
       {/* Stats Grid - split by fuel type where relevant */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={Droplets} label="Purchased (Diesel)" value={`${dieselPurchased.toLocaleString()} L`} accent="text-primary" />
-        <StatCard icon={Droplets} label="Purchased (Petrol)" value={`${petrolPurchased.toLocaleString()} L`} accent="text-primary" />
-        <StatCard icon={Package} label="Alloted (Diesel)" value={`${dieselAlloted.toLocaleString()} L`} />
-        <StatCard icon={Package} label="Alloted (Petrol)" value={`${petrolAlloted.toLocaleString()} L`} />
-        <StatCard icon={Fuel} label="Used (Diesel)" value={`${dieselUsed.toLocaleString()} L`} />
-        <StatCard icon={Fuel} label="Used (Petrol)" value={`${petrolUsed.toLocaleString()} L`} />
+        <StatCard icon={Droplets} label="Purchased (Diesel)" value={`${dieselPurchased.toLocaleString()} L`} bg="bg-green-100" />
+<StatCard icon={Droplets} label="Purchased (Petrol)" value={`${petrolPurchased.toLocaleString()} L`} bg="bg-yellow-100" />
+
+<StatCard icon={Package} label="Alloted (Diesel)" value={`${dieselAlloted.toLocaleString()} L`} bg="bg-green-100" />
+<StatCard icon={Package} label="Alloted (Petrol)" value={`${petrolAlloted.toLocaleString()} L`} bg="bg-yellow-100" />
+
+<StatCard icon={Fuel} label="Used (Diesel)" value={`${dieselUsed.toLocaleString()} L`} bg="bg-green-100" />
+<StatCard icon={Fuel} label="Used (Petrol)" value={`${petrolUsed.toLocaleString()} L`} bg="bg-yellow-100" />
         <StatCard icon={Gauge} label="Total Distance" value={`${totalKm.toLocaleString()} km`} />
         <StatCard icon={Clock} label="Total Hours" value={`${totalHours.toLocaleString()} hrs`} />
         <StatCard icon={Truck} label="Vehicles" value={uniqueVehicles} />
@@ -99,14 +101,15 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
   );
 }
 
-function StatCard({ icon: Icon, label, value, accent }: {
+function StatCard({ icon: Icon, label, value, accent, bg }: {
   icon: React.ComponentType<any>;
   label: string;
   value: string | number;
   accent?: string;
+  bg?: string;
 }) {
   return (
-    <div className="card-raised p-4 flex items-center gap-3">
+    <div className={`card-raised p-4 flex items-center gap-3 ${bg || ''}`}>
       <div className="p-2 rounded bg-muted">
         <Icon size={16} className="text-muted-foreground" />
       </div>
