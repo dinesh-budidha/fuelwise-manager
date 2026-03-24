@@ -58,11 +58,12 @@ export default function Index() {
 
   const totalAlloted = allRecords.reduce((s, r) => s + r.fuelAlloted, 0);
 
-  // Build site-wise alloted map
+  // Build site+fuelType alloted map (key: "siteName|fuelType")
   const siteAllotedMap: Record<string, number> = {};
   allRecords.forEach((r) => {
     if (r.siteName) {
-      siteAllotedMap[r.siteName] = (siteAllotedMap[r.siteName] || 0) + r.fuelAlloted;
+      const key = `${r.siteName}|${r.fuelType || 'Diesel'}`;
+      siteAllotedMap[key] = (siteAllotedMap[key] || 0) + r.fuelAlloted;
     }
   });
 

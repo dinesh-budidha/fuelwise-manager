@@ -8,7 +8,6 @@ const corsHeaders = {
 const SPREADSHEET_ID = Deno.env.get('GOOGLE_SPREADSHEET_ID');
 const SERVICE_ACCOUNT_JSON = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
 
-// Column headers for Sheet1 - MUST match recordToRow order in types/fuel.ts
 const SHEET1_HEADERS = [
   'Sl.No.', 'Site Name', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
   'Company/Private', 'Issued Date', 'Fuel Alloted', 'Issued Through',
@@ -93,7 +92,6 @@ async function ensureSheet(sheetName: string) {
         }),
       });
     }
-    // Set headers based on sheet name
     const headers = sheetName === 'FuelPurchases' ? PURCHASE_HEADERS : SHEET1_HEADERS;
     const range = `${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`;
     await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
@@ -110,11 +108,8 @@ async function ensureHeaders(sheetName: string, expectedHeaders: string[]) {
     const colLetter = String.fromCharCode(64 + expectedHeaders.length);
     const data = await sheetsRequest(`/values/${sheetName}!A1:${colLetter}1`);
     const currentHeaders: string[] = data.values?.[0] || [];
-    
-    // Check if headers match
     const matches = expectedHeaders.every((h, i) => currentHeaders[i] === h);
     if (!matches || currentHeaders.length < expectedHeaders.length) {
-      // Set correct headers
       await sheetsRequest(`/values/${sheetName}!A1:${colLetter}1?valueInputOption=USER_ENTERED`, {
         method: 'PUT',
         body: JSON.stringify({ values: [expectedHeaders] }),
@@ -132,7 +127,6 @@ async function getSheetId(sheetName: string): Promise<number> {
   return sheet?.properties?.sheetId || 0;
 }
 
-// Vehicle No is at column index 2
 async function getVehicleLastEntry(vehicleNo: string) {
   const colCount = SHEET1_HEADERS.length;
   const colLetter = String.fromCharCode(64 + colCount);
@@ -147,36 +141,74 @@ async function getVehicleLastEntry(vehicleNo: string) {
   return lastRow ? { row: lastRow } : null;
 }
 
-// Fuel Alloted is at column index 7 (column H)
-async function updateOpeningBalance(totalAlloted: number) {
+// Build alloted map per site+fuelType from Sheet1
+async function getAllotedMap(): Promise<Record<string, number>> {
   try {
+    const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
+    const vData = await sheetsRequest(`/values/Sheet1!A2:${colLetter}`);
+    const rows: string[][] = vData.values || [];
+    const map: Record<string, number> = {};
+    for (const row of rows) {
+      const site = (row[1] || '').replace(/^-$/, '');
+      const fuelType = (row[4] || 'Diesel').replace(/^-$/, '') || 'Diesel';
+      const alloted = Number(row[7]) || 0;
+      if (site) {
+        const key = `${site}|${fuelType}`;
+        map[key] = (map[key] || 0) + alloted;
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
+// Update opening balance per site+fuelType independently
+async function updateOpeningBalance() {
+  try {
+    const allotedMap = await getAllotedMap();
     const data = await sheetsRequest('/values/FuelPurchases!A2:D');
     const rows: string[][] = data.values || [];
     if (rows.length === 0) return;
 
-    let runningTotal = 0;
+    // Running totals per site+fuelType
+    const runningTotals: Record<string, number> = {};
     const balances: string[][] = [];
     for (const row of rows) {
-      runningTotal += Number(row[1]) || 0;
-      balances.push([String(runningTotal - totalAlloted)]);
+      const site = row[2] || '';
+      const fuelType = row[3] || 'Diesel';
+      const liters = Number(row[1]) || 0;
+      const key = `${site}|${fuelType}`;
+      runningTotals[key] = (runningTotals[key] || 0) + liters;
+      const alloted = allotedMap[key] || 0;
+      balances.push([String(runningTotals[key] - alloted)]);
     }
 
     await sheetsRequest(`/values/FuelPurchases!E2:E${rows.length + 1}?valueInputOption=USER_ENTERED`, {
       method: 'PUT',
       body: JSON.stringify({ values: balances }),
     });
+    console.log(`[BALANCE] Updated ${balances.length} opening balances (per site+fuelType)`);
   } catch (e) {
     console.error('updateOpeningBalance error:', e);
   }
 }
 
-async function getTotalAlloted(): Promise<number> {
-  try {
-    const vData = await sheetsRequest('/values/Sheet1!H2:H');
-    return (vData.values || []).reduce((s: number, r: string[]) => s + (Number(r[0]) || 0), 0);
-  } catch {
-    return 0;
-  }
+// Sanitize row: replace empty/null/undefined values with "-"
+function sanitizeRow(row: string[]): string[] {
+  return row.map(v => (v === '' || v === null || v === undefined || v === '0') ? '-' : v);
+}
+
+// Only sanitize empty strings, keep "0" for numeric fields
+function sanitizeRowForSheet(row: string[]): string[] {
+  // Indices that are numeric fields and should keep "0"
+  const numericIndices = new Set([7, 10, 11, 12, 13, 14, 15, 16]);
+  return row.map((v, i) => {
+    if (v === '' || v === null || v === undefined) {
+      return numericIndices.has(i) ? '0' : '-';
+    }
+    return v;
+  });
 }
 
 function json(body: unknown, status = 200) {
@@ -223,22 +255,20 @@ serve(async (req) => {
       const body = await req.json();
 
       if (body.action === 'append') {
-        // Validate row length
         if (!body.row || body.row.length !== SHEET1_HEADERS.length) {
           console.error(`[APPEND] Row length mismatch: got ${body.row?.length}, expected ${SHEET1_HEADERS.length}`);
-          console.error(`[APPEND] Row data: ${JSON.stringify(body.row)}`);
           return json({ error: `Row length mismatch: got ${body.row?.length}, expected ${SHEET1_HEADERS.length}` }, 400);
         }
         await ensureHeaders('Sheet1', SHEET1_HEADERS);
+        const sanitized = sanitizeRowForSheet(body.row);
         const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
-        console.log(`[APPEND] Inserting row: ${JSON.stringify(body.row)}`);
+        console.log(`[APPEND] Inserting row: ${JSON.stringify(sanitized)}`);
         await sheetsRequest(`/values/Sheet1!A2:${colLetter}:append?valueInputOption=USER_ENTERED`, {
           method: 'POST',
-          body: JSON.stringify({ values: [body.row] }),
+          body: JSON.stringify({ values: [sanitized] }),
         });
-        const totalAlloted = await getTotalAlloted();
-        await updateOpeningBalance(totalAlloted);
-        console.log(`[APPEND] Success. Total alloted: ${totalAlloted}`);
+        await updateOpeningBalance();
+        console.log(`[APPEND] Success`);
         return json({ success: true });
       }
 
@@ -246,15 +276,15 @@ serve(async (req) => {
         if (!body.row || body.row.length !== SHEET1_HEADERS.length) {
           return json({ error: `Row length mismatch: got ${body.row?.length}, expected ${SHEET1_HEADERS.length}` }, 400);
         }
+        const sanitized = sanitizeRowForSheet(body.row);
         const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
         const range = `Sheet1!A${body.rowIndex}:${colLetter}${body.rowIndex}`;
-        console.log(`[UPDATE] Updating row ${body.rowIndex}: ${JSON.stringify(body.row)}`);
+        console.log(`[UPDATE] Updating row ${body.rowIndex}: ${JSON.stringify(sanitized)}`);
         await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
           method: 'PUT',
-          body: JSON.stringify({ values: [body.row] }),
+          body: JSON.stringify({ values: [sanitized] }),
         });
-        const totalAlloted = await getTotalAlloted();
-        await updateOpeningBalance(totalAlloted);
+        await updateOpeningBalance();
         return json({ success: true });
       }
 
@@ -271,8 +301,7 @@ serve(async (req) => {
             }],
           }),
         });
-        const totalAlloted = await getTotalAlloted();
-        await updateOpeningBalance(totalAlloted);
+        await updateOpeningBalance();
         return json({ success: true });
       }
 
@@ -283,8 +312,7 @@ serve(async (req) => {
           method: 'POST',
           body: JSON.stringify({ values: [body.row] }),
         });
-        const totalAlloted = await getTotalAlloted();
-        await updateOpeningBalance(totalAlloted);
+        await updateOpeningBalance();
         return json({ success: true });
       }
 
@@ -301,8 +329,7 @@ serve(async (req) => {
             }],
           }),
         });
-        const totalAlloted = await getTotalAlloted();
-        await updateOpeningBalance(totalAlloted);
+        await updateOpeningBalance();
         return json({ success: true });
       }
     }

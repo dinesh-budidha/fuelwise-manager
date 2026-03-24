@@ -59,13 +59,11 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
         p.date.toLowerCase().includes(term) ||
         p.site.toLowerCase().includes(term) ||
         p.fuelType.toLowerCase().includes(term));
-
     }
     return true;
   });
 
-  // Calculate site-wise running totals for opening balance
-  // Each site's balance = cumulative purchased for that site - total alloted for that site
+  // Running totals per site+fuelType for opening balance
   const siteRunningTotals: Record<string, number> = {};
 
   return (
@@ -86,7 +84,6 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
             value={liters || ''}
             onChange={(e) => setLiters(Math.max(0, Number(e.target.value) || 0))}
             className="input-recessed tabular-nums" />
-          
         </div>
         <div className="flex flex-col gap-1">
           <label className="label-uppercase">Site Location *</label>
@@ -97,7 +94,6 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
             className="input-recessed"
             placeholder="Select or type site"
             required />
-          
           <datalist id="purchase-sites">
             {siteOptions.map((s) => <option key={s} value={s} />)}
           </datalist>
@@ -122,7 +118,6 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
             className="input-recessed w-full pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)} />
-          
         </div>
         <select value={filterSite} onChange={(e) => setFilterSite(e.target.value)} className="input-recessed text-xs min-w-[120px]">
           <option value="">All Sites</option>
@@ -160,13 +155,13 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {filteredPurchases.map((p, i) => {
-                // Running total per site independently
-                const siteName = p.site;
-                if (!siteRunningTotals[siteName]) siteRunningTotals[siteName] = 0;
-                siteRunningTotals[siteName] += p.liters;
-                const siteAlloted = siteAllotedMap[siteName] || 0;
-                const openingBal = siteRunningTotals[siteName] - siteAlloted;
+                {filteredPurchases.map((p) => {
+                // Running total per site+fuelType independently
+                const key = `${p.site}|${p.fuelType}`;
+                if (!siteRunningTotals[key]) siteRunningTotals[key] = 0;
+                siteRunningTotals[key] += p.liters;
+                const siteAlloted = siteAllotedMap[key] || 0;
+                const openingBal = siteRunningTotals[key] - siteAlloted;
 
                 const origIdx = allPurchases.findIndex((op) => op.id === p.id);
                 return (
@@ -182,12 +177,10 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
                         <button
                         onClick={() => setDeleteIdx(origIdx)}
                         className="p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all">
-                        
                           <Trash2 size={12} />
                         </button>
                       </td>
                     </tr>);
-
               })}
               </tbody>
             </table>
@@ -208,5 +201,4 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
         </AlertDialogContent>
       </AlertDialog>
     </div>);
-
 }
