@@ -17,6 +17,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fetchingVehicle, setFetchingVehicle] = useState(false);
   const [prevVehicleInfo, setPrevVehicleInfo] = useState<string | null>(null);
+  const [kmManuallyEdited, setKmManuallyEdited] = useState(false);
 
   useEffect(() => {
     if (editData) {
