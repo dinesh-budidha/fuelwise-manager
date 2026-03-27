@@ -299,19 +299,15 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
         {!hourBased && <ReadOnly label="Kilometers" value={form.kilometers} />}
 
-        {/* KM per Ltr - editable for Car/2 Wheeler, readonly for others */}
-        {manualMileage ? (
-          <NumField
-            label="KM per Ltr (Editable)"
-            value={form.kmPerLtr}
-            onChange={v => handleChange('kmPerLtr', v)}
-          />
-        ) : (
-          <ReadOnly
-            label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
-            value={form.kmPerLtr}
-          />
-        )}
+        {/* KM per Ltr - editable for all vehicle types */}
+        <NumField
+          label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
+          value={form.kmPerLtr}
+          onChange={v => {
+            setKmManuallyEdited(true);
+            handleChange('kmPerLtr', v);
+          }}
+        />
 
         <ReadOnly label="Used in Ltrs" value={form.usedInLtrs} />
         <ReadOnly label="Balance Liters" value={form.balanceLiters} highlight={form.balanceLiters < 0} />
