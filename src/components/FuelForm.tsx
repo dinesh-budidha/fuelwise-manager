@@ -33,16 +33,29 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
   useEffect(() => {
     if (isManualMileage(form.vehicleType)) {
-      // For manual mileage vehicles, don't override kmPerLtr
       const config = getVehicleConfig(form.vehicleType);
       const kilometers = Math.max(0, form.endingReading - form.startingReading);
-      const kmPerLtr = form.kmPerLtr || config?.rate || 0;
+      const kmPerLtr = kmManuallyEdited ? form.kmPerLtr : (form.kmPerLtr || config?.rate || 0);
       const usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
       const balanceLiters = Number((form.fuelAlloted - usedInLtrs).toFixed(2));
-      setForm(prev => ({ ...prev, kilometers, usedInLtrs, balanceLiters }));
+      setForm(prev => ({ ...prev, kilometers, usedInLtrs, balanceLiters, ...(kmManuallyEdited ? {} : { kmPerLtr }) }));
     } else {
       const calcs = calculateFields(form);
-      setForm(prev => ({ ...prev, ...calcs }));
+      if (kmManuallyEdited) {
+        // Recalc usedInLtrs/balance using user's custom kmPerLtr
+        const config = getVehicleConfig(form.vehicleType);
+        const isHour = config?.type === 'hour';
+        let usedInLtrs: number;
+        if (isHour) {
+          usedInLtrs = Number(((form.hours || 0) * form.kmPerLtr).toFixed(2));
+        } else {
+          usedInLtrs = form.kmPerLtr > 0 ? Number((calcs.kilometers / form.kmPerLtr).toFixed(2)) : 0;
+        }
+        const balanceLiters = Number(((form.fuelAlloted || 0) - usedInLtrs).toFixed(2));
+        setForm(prev => ({ ...prev, kilometers: calcs.kilometers, usedInLtrs, balanceLiters }));
+      } else {
+        setForm(prev => ({ ...prev, ...calcs }));
+      }
     }
   }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType, form.dgCapacity, form.kmPerLtr]);
 
