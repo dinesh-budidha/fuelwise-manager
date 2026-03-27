@@ -156,6 +156,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
       setForm({ ...EMPTY_FORM, slNo: String(nextSlNo + 1) });
       setErrors({});
       setPrevVehicleInfo(null);
+      setKmManuallyEdited(false);
     }
     setSubmitting(false);
   };
