@@ -61,11 +61,12 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
   const handleVehicleTypeChange = (vehicleType: string) => {
     const config = getVehicleConfig(vehicleType);
+    setKmManuallyEdited(false);
     setForm(prev => ({
       ...prev,
       vehicleType,
       dgCapacity: vehicleType === 'Diesel Generator' ? prev.dgCapacity : '',
-      kmPerLtr: config?.manualMileage ? config.rate : (prev.kmPerLtr),
+      kmPerLtr: config ? config.rate : 0,
       ...(config?.type === 'hour' ? { startingReading: 0, endingReading: 0 } : { hours: 0 }),
     }));
     setErrors({});
