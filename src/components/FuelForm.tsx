@@ -17,39 +17,56 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fetchingVehicle, setFetchingVehicle] = useState(false);
   const [prevVehicleInfo, setPrevVehicleInfo] = useState<string | null>(null);
+  const [kmManuallyEdited, setKmManuallyEdited] = useState(false);
 
   useEffect(() => {
     if (editData) {
       setForm(editData);
       setPrevVehicleInfo(null);
+      setKmManuallyEdited(false);
     } else {
       setForm({ ...EMPTY_FORM, slNo: String(nextSlNo) });
       setPrevVehicleInfo(null);
+      setKmManuallyEdited(false);
     }
   }, [editData, nextSlNo]);
 
   useEffect(() => {
     if (isManualMileage(form.vehicleType)) {
-      // For manual mileage vehicles, don't override kmPerLtr
       const config = getVehicleConfig(form.vehicleType);
       const kilometers = Math.max(0, form.endingReading - form.startingReading);
-      const kmPerLtr = form.kmPerLtr || config?.rate || 0;
+      const kmPerLtr = kmManuallyEdited ? form.kmPerLtr : (form.kmPerLtr || config?.rate || 0);
       const usedInLtrs = kmPerLtr > 0 ? Number((kilometers / kmPerLtr).toFixed(2)) : 0;
       const balanceLiters = Number((form.fuelAlloted - usedInLtrs).toFixed(2));
-      setForm(prev => ({ ...prev, kilometers, usedInLtrs, balanceLiters }));
+      setForm(prev => ({ ...prev, kilometers, usedInLtrs, balanceLiters, ...(kmManuallyEdited ? {} : { kmPerLtr }) }));
     } else {
       const calcs = calculateFields(form);
-      setForm(prev => ({ ...prev, ...calcs }));
+      if (kmManuallyEdited) {
+        // Recalc usedInLtrs/balance using user's custom kmPerLtr
+        const config = getVehicleConfig(form.vehicleType);
+        const isHour = config?.type === 'hour';
+        let usedInLtrs: number;
+        if (isHour) {
+          usedInLtrs = Number(((form.hours || 0) * form.kmPerLtr).toFixed(2));
+        } else {
+          usedInLtrs = form.kmPerLtr > 0 ? Number((calcs.kilometers / form.kmPerLtr).toFixed(2)) : 0;
+        }
+        const balanceLiters = Number(((form.fuelAlloted || 0) - usedInLtrs).toFixed(2));
+        setForm(prev => ({ ...prev, kilometers: calcs.kilometers, usedInLtrs, balanceLiters }));
+      } else {
+        setForm(prev => ({ ...prev, ...calcs }));
+      }
     }
   }, [form.startingReading, form.endingReading, form.fuelAlloted, form.hours, form.vehicleType, form.dgCapacity, form.kmPerLtr]);
 
   const handleVehicleTypeChange = (vehicleType: string) => {
     const config = getVehicleConfig(vehicleType);
+    setKmManuallyEdited(false);
     setForm(prev => ({
       ...prev,
       vehicleType,
       dgCapacity: vehicleType === 'Diesel Generator' ? prev.dgCapacity : '',
-      kmPerLtr: config?.manualMileage ? config.rate : (prev.kmPerLtr),
+      kmPerLtr: config ? config.rate : 0,
       ...(config?.type === 'hour' ? { startingReading: 0, endingReading: 0 } : { hours: 0 }),
     }));
     setErrors({});
@@ -139,6 +156,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
       setForm({ ...EMPTY_FORM, slNo: String(nextSlNo + 1) });
       setErrors({});
       setPrevVehicleInfo(null);
+      setKmManuallyEdited(false);
     }
     setSubmitting(false);
   };
@@ -281,19 +299,15 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
         {!hourBased && <ReadOnly label="Kilometers" value={form.kilometers} />}
 
-        {/* KM per Ltr - editable for Car/2 Wheeler, readonly for others */}
-        {manualMileage ? (
-          <NumField
-            label="KM per Ltr (Editable)"
-            value={form.kmPerLtr}
-            onChange={v => handleChange('kmPerLtr', v)}
-          />
-        ) : (
-          <ReadOnly
-            label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
-            value={form.kmPerLtr}
-          />
-        )}
+        {/* KM per Ltr - editable for all vehicle types */}
+        <NumField
+          label={hourBased ? 'Consumption Rate (Ltrs/Hr)' : 'KM per Ltr'}
+          value={form.kmPerLtr}
+          onChange={v => {
+            setKmManuallyEdited(true);
+            handleChange('kmPerLtr', v);
+          }}
+        />
 
         <ReadOnly label="Used in Ltrs" value={form.usedInLtrs} />
         <ReadOnly label="Balance Liters" value={form.balanceLiters} highlight={form.balanceLiters < 0} />
