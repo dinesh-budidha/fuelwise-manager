@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Search } from 'lucide-react';
 import { FuelPurchase } from '@/types/fuelPurchase';
 import { FUEL_TYPES } from '@/types/fuel';
-import { toIndianDate } from '@/lib/dateUtils';
+import { toIndianDate, yesterdayISO } from '@/lib/dateUtils';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -23,7 +23,7 @@ interface Props {
 }
 
 export default function FuelPurchaseForm({ purchases, allPurchases, loading, onAdd, onDelete, totalPurchased, totalAlloted, siteAllotedMap, siteOptions, selectedSite }: Props) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(yesterdayISO());
   const [liters, setLiters] = useState<number>(0);
   const [site, setSite] = useState('');
   const [fuelType, setFuelType] = useState('Diesel');
@@ -36,10 +36,10 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
     e.preventDefault();
     if (!date || liters <= 0 || !site.trim()) return;
     setSubmitting(true);
-    const success = await onAdd(date, liters, site.trim(), fuelType);
+    const success = await onAdd(date, liters, site.trim().toUpperCase(), fuelType);
     if (success) {
       setLiters(0);
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(yesterdayISO());
     }
     setSubmitting(false);
   };
@@ -90,8 +90,8 @@ export default function FuelPurchaseForm({ purchases, allPurchases, loading, onA
           <input
             list="purchase-sites"
             value={site}
-            onChange={(e) => setSite(e.target.value)}
-            className="input-recessed"
+            onChange={(e) => setSite(e.target.value.toUpperCase())}
+            className="input-recessed uppercase"
             placeholder="Select or type site"
             required />
           <datalist id="purchase-sites">
