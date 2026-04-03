@@ -42,7 +42,6 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
     } else {
       const calcs = calculateFields(form);
       if (kmManuallyEdited) {
-        // Recalc usedInLtrs/balance using user's custom kmPerLtr
         const config = getVehicleConfig(form.vehicleType);
         const isHour = config?.type === 'hour';
         let usedInLtrs: number;
@@ -73,15 +72,16 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
   };
 
   const handleVehicleNoBlur = async () => {
-    const vehicleNo = form.vehicleNo.trim();
+    const vehicleNo = form.vehicleNo.trim().toUpperCase();
     if (!vehicleNo || editData || !onVehicleNoBlur) return;
     setFetchingVehicle(true);
     try {
       const lastRow = await onVehicleNoBlur(vehicleNo);
       if (lastRow) {
-        const prevEndingReading = Number(lastRow[11]) || 0;
-        const prevBalance = Number(lastRow[16]) || 0;
-        const prevVehicleType = lastRow[3] || '';
+        // New indices: endingReading=12, balanceLiters=17, vehicleType=4, siteName=1
+        const prevEndingReading = Number(lastRow[12]) || 0;
+        const prevBalance = Number(lastRow[17]) || 0;
+        const prevVehicleType = lastRow[4] || '';
         const prevSite = lastRow[1] || '';
 
         setForm(prev => ({
@@ -89,15 +89,17 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           startingReading: prevEndingReading,
           vehicleType: prev.vehicleType || prevVehicleType,
           siteName: prev.siteName || prevSite,
+          // Add previous balance to fuel alloted
+          fuelAlloted: prev.fuelAlloted + prevBalance,
         }));
 
-        setPrevVehicleInfo(`Last entry: Ending Reading ${prevEndingReading}, Balance ${prevBalance} L`);
+        setPrevVehicleInfo(`Last entry: Ending Reading ${prevEndingReading}, Balance ${prevBalance} L (added to Fuel Alloted)`);
 
         if (prevVehicleType && !form.vehicleType) {
           handleVehicleTypeChange(prevVehicleType);
         }
 
-        toast({ title: 'Vehicle found', description: `Auto-filled from previous entry (Reading: ${prevEndingReading})` });
+        toast({ title: 'Vehicle found', description: `Auto-filled from previous entry. Balance ${prevBalance} L added to Fuel Alloted.` });
       } else {
         setPrevVehicleInfo(null);
       }
@@ -140,6 +142,10 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
 
   const handleChange = (field: keyof FuelFormData, value: string | number) => {
     if (typeof value === 'number' && value < 0) value = 0;
+    // Uppercase string values
+    if (typeof value === 'string' && field !== 'issuedDate') {
+      value = value.toUpperCase();
+    }
     setForm(prev => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
@@ -186,6 +192,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <Field label="Sl.No." value={form.slNo} onChange={v => handleChange('slNo', v)} error={errors.slNo} />
         <Field label="Site Name" value={form.siteName} onChange={v => handleChange('siteName', v)} error={errors.siteName} />
+        <Field label="Vehicle Sent To Location" value={form.vehicleSentToLocation} onChange={v => handleChange('vehicleSentToLocation', v)} />
         <Field label="Issued Date" type="date" value={form.issuedDate} onChange={v => handleChange('issuedDate', v)} />
 
         <SelectField label="Fuel Type" value={form.fuelType} options={[...FUEL_TYPES]} onChange={v => handleChange('fuelType', v)} />
@@ -252,7 +259,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
             value={form.vehicleNo}
             onChange={e => handleChange('vehicleNo', e.target.value)}
             onBlur={handleVehicleNoBlur}
-            className={`input-recessed ${errors.vehicleNo ? 'ring-2 ring-destructive' : ''}`}
+            className={`input-recessed uppercase ${errors.vehicleNo ? 'ring-2 ring-destructive' : ''}`}
             placeholder="Enter & tab to auto-fill"
           />
           {errors.vehicleNo && <span className="text-[10px] text-destructive">{errors.vehicleNo}</span>}
@@ -330,8 +337,8 @@ function Field({ label, value, onChange, type = 'text', error }: {
   return (
     <div className="flex flex-col gap-1">
       <label className="label-uppercase">{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)}
-        className={`input-recessed ${error ? 'ring-2 ring-destructive' : ''}`} />
+      <input type={type} value={value} onChange={e => onChange(type === 'date' ? e.target.value : e.target.value.toUpperCase())}
+        className={`input-recessed ${type !== 'date' ? 'uppercase' : ''} ${error ? 'ring-2 ring-destructive' : ''}`} />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
     </div>
   );

@@ -21,6 +21,7 @@ type SortDir = 'asc' | 'desc';
 const COLS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: 'slNo', label: 'Sl.No.' },
   { key: 'siteName', label: 'Site' },
+  { key: 'vehicleSentToLocation', label: 'Vehicle Sent To Location' },
   { key: 'vehicleNo', label: 'Vehicle No' },
   { key: 'vehicleType', label: 'Type' },
   { key: 'fuelType', label: 'Fuel' },
@@ -72,7 +73,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
   return (
     <div className="card-raised overflow-hidden flex flex-col">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[1400px]">
+        <table className="w-full text-left border-collapse min-w-[1500px]">
           <thead>
             <tr className="bg-muted/50 border-b border-border">
               {COLS.map(col => (
@@ -95,13 +96,13 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
           <tbody className="divide-y divide-border/50">
             {loading ? (
               <tr>
-                <td colSpan={18} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={19} className="td-cell text-center text-muted-foreground py-12">
                   Loading records...
                 </td>
               </tr>
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={18} className="td-cell text-center text-muted-foreground py-12">
+                <td colSpan={19} className="td-cell text-center text-muted-foreground py-12">
                   No records found
                 </td>
               </tr>
@@ -112,6 +113,7 @@ export default function FuelTable({ records, loading, onEdit, onDelete }: Props)
                   <tr key={rec.id} className="hover:bg-primary/[0.03] transition-colors group">
                     <td className="td-cell font-medium">{rec.slNo}</td>
                     <td className="td-cell">{rec.siteName}</td>
+                    <td className="td-cell">{rec.vehicleSentToLocation || '—'}</td>
                     <td className="td-cell tabular-nums font-medium">{rec.vehicleNo}</td>
                     <td className="td-cell">{rec.vehicleType}{rec.dgCapacity ? ` (${rec.dgCapacity})` : ''}</td>
                     <td className="td-cell">{rec.fuelType}</td>

@@ -1,7 +1,10 @@
+import { yesterdayISO } from '@/lib/dateUtils';
+
 export interface FuelRecord {
   id: string;
   slNo: string;
   siteName: string;
+  vehicleSentToLocation: string;
   litersPurchased: number;
   issuedDate: string;
   vehicleOwnership: 'Company' | 'Private';
@@ -80,8 +83,9 @@ export function isManualMileage(vehicleType: string): boolean {
 export const EMPTY_FORM: FuelFormData = {
   slNo: '',
   siteName: '',
+  vehicleSentToLocation: '',
   litersPurchased: 0,
-  issuedDate: new Date().toISOString().split('T')[0],
+  issuedDate: yesterdayISO(),
   vehicleOwnership: 'Company',
   vehicleType: '',
   vehicleNo: '',
@@ -99,8 +103,9 @@ export const EMPTY_FORM: FuelFormData = {
   issuedThroughValue: '',
 };
 
+// 19 columns now (added "Vehicle Sent To Location" at index 2)
 export const COLUMNS = [
-  'Sl.No.', 'Site Name', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
+  'Sl.No.', 'Site Name', 'Vehicle Sent To Location', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
   'Company/Private', 'Issued Date', 'Fuel Alloted', 'Issued Through',
   'Indent Number', 'Starting Reading', 'Ending Reading', 'Kilometers',
   'Hours', 'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'DG Capacity',
@@ -137,26 +142,28 @@ export function calculateFields(data: Partial<FuelFormData>): Pick<FuelFormData,
 
 export function recordToRow(record: FuelFormData): string[] {
   const raw = [
-    record.slNo,                        // 0: Sl.No.
-    record.siteName,                     // 1: Site Name
-    record.vehicleNo,                    // 2: Vehicle No
-    record.vehicleType,                  // 3: Vehicle Type
-    record.fuelType || 'Diesel',         // 4: Fuel Type
-    record.vehicleOwnership,             // 5: Company/Private
-    record.issuedDate,                   // 6: Issued Date
-    String(record.fuelAlloted),          // 7: Fuel Alloted
-    record.issuedThrough || '',          // 8: Issued Through
-    record.issuedThroughValue || '',     // 9: Indent Number
-    String(record.startingReading),      // 10: Starting Reading
-    String(record.endingReading),        // 11: Ending Reading
-    String(record.kilometers),           // 12: Kilometers
-    String(record.hours),                // 13: Hours
-    String(record.kmPerLtr),             // 14: KM per Ltr
-    String(record.usedInLtrs),           // 15: Used in Ltrs
-    String(record.balanceLiters),        // 16: Balance Liters
-    record.dgCapacity || '',             // 17: DG Capacity
+    record.slNo,                                    // 0: Sl.No.
+    record.siteName,                                 // 1: Site Name
+    record.vehicleSentToLocation || '',              // 2: Vehicle Sent To Location
+    record.vehicleNo,                                // 3: Vehicle No
+    record.vehicleType,                              // 4: Vehicle Type
+    record.fuelType || 'Diesel',                     // 5: Fuel Type
+    record.vehicleOwnership,                         // 6: Company/Private
+    record.issuedDate,                               // 7: Issued Date
+    String(record.fuelAlloted),                      // 8: Fuel Alloted
+    record.issuedThrough || '',                      // 9: Issued Through
+    record.issuedThroughValue || '',                 // 10: Indent Number
+    String(record.startingReading),                  // 11: Starting Reading
+    String(record.endingReading),                    // 12: Ending Reading
+    String(record.kilometers),                       // 13: Kilometers
+    String(record.hours),                            // 14: Hours
+    String(record.kmPerLtr),                         // 15: KM per Ltr
+    String(record.usedInLtrs),                       // 16: Used in Ltrs
+    String(record.balanceLiters),                    // 17: Balance Liters
+    record.dgCapacity || '',                         // 18: DG Capacity
   ];
-  return raw;
+  // Uppercase all string values
+  return raw.map(v => typeof v === 'string' ? v.toUpperCase() : v);
 }
 
 // Helper to handle "-" from sheet as empty
@@ -175,22 +182,23 @@ export function rowToRecord(row: string[], index: number): FuelRecord {
     id: `row-${index}`,
     slNo: str(row[0]),
     siteName: str(row[1]),
-    vehicleNo: str(row[2]),
-    vehicleType: str(row[3]),
-    fuelType: str(row[4]) || 'Diesel',
-    vehicleOwnership: (row[5] === 'Private' ? 'Private' : 'Company'),
-    issuedDate: str(row[6]),
-    fuelAlloted: num(row[7]),
-    issuedThrough: str(row[8]),
-    issuedThroughValue: str(row[9]),
-    startingReading: num(row[10]),
-    endingReading: num(row[11]),
-    kilometers: num(row[12]),
-    hours: num(row[13]),
-    kmPerLtr: num(row[14]),
-    usedInLtrs: num(row[15]),
-    balanceLiters: num(row[16]),
-    dgCapacity: str(row[17]),
+    vehicleSentToLocation: str(row[2]),
+    vehicleNo: str(row[3]),
+    vehicleType: str(row[4]),
+    fuelType: str(row[5]) || 'Diesel',
+    vehicleOwnership: (row[6] === 'Private' || row[6] === 'PRIVATE' ? 'Private' : 'Company'),
+    issuedDate: str(row[7]),
+    fuelAlloted: num(row[8]),
+    issuedThrough: str(row[9]),
+    issuedThroughValue: str(row[10]),
+    startingReading: num(row[11]),
+    endingReading: num(row[12]),
+    kilometers: num(row[13]),
+    hours: num(row[14]),
+    kmPerLtr: num(row[15]),
+    usedInLtrs: num(row[16]),
+    balanceLiters: num(row[17]),
+    dgCapacity: str(row[18]),
     litersPurchased: 0,
   };
 }

@@ -23,7 +23,6 @@ export default function ExportButton({ records }: Props) {
       const data = await res.json();
       return data.rows as string[][] || [];
     } catch {
-      // Fallback to local records
       return null;
     }
   };
@@ -38,22 +37,23 @@ export default function ExportButton({ records }: Props) {
     return records.map(r => ({
       [COLUMNS[0]]: r.slNo,
       [COLUMNS[1]]: r.siteName,
-      [COLUMNS[2]]: r.vehicleNo,
-      [COLUMNS[3]]: r.vehicleType,
-      [COLUMNS[4]]: r.fuelType,
-      [COLUMNS[5]]: r.vehicleOwnership,
-      [COLUMNS[6]]: r.issuedDate,
-      [COLUMNS[7]]: r.fuelAlloted,
-      [COLUMNS[8]]: r.issuedThrough,
-      [COLUMNS[9]]: r.issuedThroughValue,
-      [COLUMNS[10]]: r.startingReading,
-      [COLUMNS[11]]: r.endingReading,
-      [COLUMNS[12]]: r.kilometers,
-      [COLUMNS[13]]: r.hours,
-      [COLUMNS[14]]: r.kmPerLtr,
-      [COLUMNS[15]]: r.usedInLtrs,
-      [COLUMNS[16]]: r.balanceLiters,
-      [COLUMNS[17]]: r.dgCapacity,
+      [COLUMNS[2]]: r.vehicleSentToLocation || '',
+      [COLUMNS[3]]: r.vehicleNo,
+      [COLUMNS[4]]: r.vehicleType,
+      [COLUMNS[5]]: r.fuelType,
+      [COLUMNS[6]]: r.vehicleOwnership,
+      [COLUMNS[7]]: r.issuedDate,
+      [COLUMNS[8]]: r.fuelAlloted,
+      [COLUMNS[9]]: r.issuedThrough,
+      [COLUMNS[10]]: r.issuedThroughValue,
+      [COLUMNS[11]]: r.startingReading,
+      [COLUMNS[12]]: r.endingReading,
+      [COLUMNS[13]]: r.kilometers,
+      [COLUMNS[14]]: r.hours,
+      [COLUMNS[15]]: r.kmPerLtr,
+      [COLUMNS[16]]: r.usedInLtrs,
+      [COLUMNS[17]]: r.balanceLiters,
+      [COLUMNS[18]]: r.dgCapacity,
     }));
   };
 

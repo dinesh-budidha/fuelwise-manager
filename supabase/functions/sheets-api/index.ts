@@ -8,8 +8,9 @@ const corsHeaders = {
 const SPREADSHEET_ID = Deno.env.get('GOOGLE_SPREADSHEET_ID');
 const SERVICE_ACCOUNT_JSON = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
 
+// 19 columns now (added "Vehicle Sent To Location" at index 2)
 const SHEET1_HEADERS = [
-  'Sl.No.', 'Site Name', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
+  'Sl.No.', 'Site Name', 'Vehicle Sent To Location', 'Vehicle No', 'Vehicle Type', 'Fuel Type',
   'Company/Private', 'Issued Date', 'Fuel Alloted', 'Issued Through',
   'Indent Number', 'Starting Reading', 'Ending Reading', 'Kilometers',
   'Hours', 'KM per Ltr', 'Used in Ltrs', 'Balance Liters', 'DG Capacity',
@@ -93,7 +94,8 @@ async function ensureSheet(sheetName: string) {
       });
     }
     const headers = sheetName === 'FuelPurchases' ? PURCHASE_HEADERS : SHEET1_HEADERS;
-    const range = `${sheetName}!A1:${String.fromCharCode(64 + headers.length)}1`;
+    const colLetter = colToLetter(headers.length);
+    const range = `${sheetName}!A1:${colLetter}1`;
     await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
       method: 'PUT',
       body: JSON.stringify({ values: [headers] }),
@@ -103,9 +105,19 @@ async function ensureSheet(sheetName: string) {
   }
 }
 
+function colToLetter(n: number): string {
+  let s = '';
+  while (n > 0) {
+    n--;
+    s = String.fromCharCode(65 + (n % 26)) + s;
+    n = Math.floor(n / 26);
+  }
+  return s;
+}
+
 async function ensureHeaders(sheetName: string, expectedHeaders: string[]) {
   try {
-    const colLetter = String.fromCharCode(64 + expectedHeaders.length);
+    const colLetter = colToLetter(expectedHeaders.length);
     const data = await sheetsRequest(`/values/${sheetName}!A1:${colLetter}1`);
     const currentHeaders: string[] = data.values?.[0] || [];
     const matches = expectedHeaders.every((h, i) => currentHeaders[i] === h);
@@ -129,12 +141,13 @@ async function getSheetId(sheetName: string): Promise<number> {
 
 async function getVehicleLastEntry(vehicleNo: string) {
   const colCount = SHEET1_HEADERS.length;
-  const colLetter = String.fromCharCode(64 + colCount);
+  const colLetter = colToLetter(colCount);
   const data = await sheetsRequest(`/values/Sheet1!A2:${colLetter}`);
   const rows: string[][] = data.values || [];
   let lastRow: string[] | null = null;
   for (let i = 0; i < rows.length; i++) {
-    if (rows[i][2]?.toLowerCase() === vehicleNo.toLowerCase()) {
+    // Vehicle No is at index 3 now
+    if (rows[i][3]?.toUpperCase() === vehicleNo.toUpperCase()) {
       lastRow = rows[i];
     }
   }
@@ -144,14 +157,15 @@ async function getVehicleLastEntry(vehicleNo: string) {
 // Build alloted map per site+fuelType from Sheet1
 async function getAllotedMap(): Promise<Record<string, number>> {
   try {
-    const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
+    const colLetter = colToLetter(SHEET1_HEADERS.length);
     const vData = await sheetsRequest(`/values/Sheet1!A2:${colLetter}`);
     const rows: string[][] = vData.values || [];
     const map: Record<string, number> = {};
     for (const row of rows) {
+      // Site Name at index 1, Fuel Type at index 5, Fuel Alloted at index 8
       const site = (row[1] || '').replace(/^-$/, '');
-      const fuelType = (row[4] || 'Diesel').replace(/^-$/, '') || 'Diesel';
-      const alloted = Number(row[7]) || 0;
+      const fuelType = (row[5] || 'Diesel').replace(/^-$/, '') || 'Diesel';
+      const alloted = Number(row[8]) || 0;
       if (site) {
         const key = `${site}|${fuelType}`;
         map[key] = (map[key] || 0) + alloted;
@@ -201,13 +215,14 @@ function sanitizeRow(row: string[]): string[] {
 
 // Only sanitize empty strings, keep "0" for numeric fields
 function sanitizeRowForSheet(row: string[]): string[] {
-  // Indices that are numeric fields and should keep "0"
-  const numericIndices = new Set([7, 10, 11, 12, 13, 14, 15, 16]);
+  // Numeric field indices (19 columns): 8=FuelAlloted, 11=StartReading, 12=EndReading, 13=KM, 14=Hours, 15=KMperLtr, 16=Used, 17=Balance
+  const numericIndices = new Set([8, 11, 12, 13, 14, 15, 16, 17]);
   return row.map((v, i) => {
     if (v === '' || v === null || v === undefined) {
       return numericIndices.has(i) ? '0' : '-';
     }
-    return v;
+    // Uppercase all string values
+    return typeof v === 'string' ? v.toUpperCase() : v;
   });
 }
 
@@ -232,7 +247,7 @@ serve(async (req) => {
     if (req.method === 'GET') {
       if (action === 'get') {
         await ensureHeaders('Sheet1', SHEET1_HEADERS);
-        const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
+        const colLetter = colToLetter(SHEET1_HEADERS.length);
         const data = await sheetsRequest(`/values/Sheet1!A2:${colLetter}`);
         console.log(`[GET] Fetched ${(data.values || []).length} rows from Sheet1`);
         return json({ rows: data.values || [] });
@@ -261,7 +276,7 @@ serve(async (req) => {
         }
         await ensureHeaders('Sheet1', SHEET1_HEADERS);
         const sanitized = sanitizeRowForSheet(body.row);
-        const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
+        const colLetter = colToLetter(SHEET1_HEADERS.length);
         console.log(`[APPEND] Inserting row: ${JSON.stringify(sanitized)}`);
         await sheetsRequest(`/values/Sheet1!A2:${colLetter}:append?valueInputOption=USER_ENTERED`, {
           method: 'POST',
@@ -277,7 +292,7 @@ serve(async (req) => {
           return json({ error: `Row length mismatch: got ${body.row?.length}, expected ${SHEET1_HEADERS.length}` }, 400);
         }
         const sanitized = sanitizeRowForSheet(body.row);
-        const colLetter = String.fromCharCode(64 + SHEET1_HEADERS.length);
+        const colLetter = colToLetter(SHEET1_HEADERS.length);
         const range = `Sheet1!A${body.rowIndex}:${colLetter}${body.rowIndex}`;
         console.log(`[UPDATE] Updating row ${body.rowIndex}: ${JSON.stringify(sanitized)}`);
         await sheetsRequest(`/values/${range}?valueInputOption=USER_ENTERED`, {
@@ -307,10 +322,12 @@ serve(async (req) => {
 
       if (body.action === 'append_purchase') {
         await ensureSheet('FuelPurchases');
-        console.log(`[APPEND_PURCHASE] Row: ${JSON.stringify(body.row)}`);
+        // Uppercase the purchase row values
+        const upperRow = (body.row as string[]).map((v: string) => typeof v === 'string' ? v.toUpperCase() : v);
+        console.log(`[APPEND_PURCHASE] Row: ${JSON.stringify(upperRow)}`);
         await sheetsRequest('/values/FuelPurchases!A2:D:append?valueInputOption=USER_ENTERED', {
           method: 'POST',
-          body: JSON.stringify({ values: [body.row] }),
+          body: JSON.stringify({ values: [upperRow] }),
         });
         await updateOpeningBalance();
         return json({ success: true });
