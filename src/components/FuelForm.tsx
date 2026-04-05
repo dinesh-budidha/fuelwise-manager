@@ -140,10 +140,13 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
     return Object.keys(newErrors).length === 0;
   };
 
+  // Fields that use fixed option values — must NOT be uppercased
+  const selectFields = new Set<keyof FuelFormData>(['fuelType', 'vehicleOwnership', 'issuedThrough', 'vehicleType', 'dgCapacity']);
+
   const handleChange = (field: keyof FuelFormData, value: string | number) => {
     if (typeof value === 'number' && value < 0) value = 0;
-    // Uppercase string values
-    if (typeof value === 'string' && field !== 'issuedDate') {
+    // Uppercase free-text string values only (not selects, not dates)
+    if (typeof value === 'string' && field !== 'issuedDate' && !selectFields.has(field)) {
       value = value.toUpperCase();
     }
     setForm(prev => ({ ...prev, [field]: value }));
@@ -285,7 +288,7 @@ export default function FuelForm({ onSubmit, editData, onCancelEdit, nextSlNo, o
           </select>
         </div>
 
-        {form.issuedThrough === 'Indent' && (
+        {(form.issuedThrough === 'Indent' || form.issuedThrough === 'INDENT') && (
           <Field
             label="Indent number"
             value={form.issuedThroughValue}

@@ -15,17 +15,19 @@ export default function DashboardSummary({ records, purchases, totalPurchased, t
   const sitePurchases = selectedSite ? purchases.filter(p => p.site === selectedSite) : purchases;
 
   // Split by fuel type
-  const dieselPurchased = sitePurchases.filter(p => p.fuelType !== 'Petrol').reduce((s, p) => s + p.liters, 0);
-  const petrolPurchased = sitePurchases.filter(p => p.fuelType === 'Petrol').reduce((s, p) => s + p.liters, 0);
+  const isPetrol = (ft: string) => ft?.toUpperCase() === 'PETROL';
 
-  const dieselAlloted = siteRecords.filter(r => r.fuelType !== 'Petrol').reduce((s, r) => s + r.fuelAlloted, 0);
-  const petrolAlloted = siteRecords.filter(r => r.fuelType === 'Petrol').reduce((s, r) => s + r.fuelAlloted, 0);
+  const dieselPurchased = sitePurchases.filter(p => !isPetrol(p.fuelType)).reduce((s, p) => s + p.liters, 0);
+  const petrolPurchased = sitePurchases.filter(p => isPetrol(p.fuelType)).reduce((s, p) => s + p.liters, 0);
+
+  const dieselAlloted = siteRecords.filter(r => !isPetrol(r.fuelType)).reduce((s, r) => s + r.fuelAlloted, 0);
+  const petrolAlloted = siteRecords.filter(r => isPetrol(r.fuelType)).reduce((s, r) => s + r.fuelAlloted, 0);
 
   const dieselBalance = dieselPurchased - dieselAlloted;
   const petrolBalance = petrolPurchased - petrolAlloted;
 
-  const dieselUsed = siteRecords.filter(r => r.fuelType !== 'Petrol').reduce((s, r) => s + r.usedInLtrs, 0);
-  const petrolUsed = siteRecords.filter(r => r.fuelType === 'Petrol').reduce((s, r) => s + r.usedInLtrs, 0);
+  const dieselUsed = siteRecords.filter(r => !isPetrol(r.fuelType)).reduce((s, r) => s + r.usedInLtrs, 0);
+  const petrolUsed = siteRecords.filter(r => isPetrol(r.fuelType)).reduce((s, r) => s + r.usedInLtrs, 0);
 
   const totalKm = siteRecords.reduce((s, r) => s + r.kilometers, 0);
   const totalHours = siteRecords.reduce((s, r) => s + r.hours, 0);
