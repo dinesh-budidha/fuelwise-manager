@@ -164,7 +164,9 @@ async function getAllotedMap(): Promise<Record<string, number>> {
     for (const row of rows) {
       // Site Name at index 1, Fuel Type at index 5, Fuel Alloted at index 8
       const site = (row[1] || '').replace(/^-$/, '');
-      const fuelType = (row[5] || 'Diesel').replace(/^-$/, '') || 'Diesel';
+      const rawFuelType = (row[5] || 'Diesel').replace(/^-$/, '') || 'Diesel';
+      // Normalize fuel type for consistent key matching
+      const fuelType = rawFuelType.toUpperCase() === 'PETROL' ? 'Petrol' : 'Diesel';
       const alloted = Number(row[8]) || 0;
       if (site) {
         const key = `${site}|${fuelType}`;
@@ -190,7 +192,8 @@ async function updateOpeningBalance() {
     const balances: string[][] = [];
     for (const row of rows) {
       const site = row[2] || '';
-      const fuelType = row[3] || 'Diesel';
+      const rawFuelType = row[3] || 'Diesel';
+      const fuelType = rawFuelType.toUpperCase() === 'PETROL' ? 'Petrol' : 'Diesel';
       const liters = Number(row[1]) || 0;
       const key = `${site}|${fuelType}`;
       runningTotals[key] = (runningTotals[key] || 0) + liters;
