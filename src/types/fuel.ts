@@ -185,8 +185,12 @@ export function rowToRecord(row: string[], index: number): FuelRecord {
     vehicleSentToLocation: str(row[2]),
     vehicleNo: str(row[3]),
     vehicleType: str(row[4]),
-    fuelType: str(row[5]) || 'Diesel',
-    vehicleOwnership: (row[6] === 'Private' || row[6] === 'PRIVATE' ? 'Private' : 'Company'),
+    fuelType: (() => {
+      const raw = str(row[5]);
+      if (!raw) return 'Diesel';
+      return raw.toUpperCase() === 'PETROL' ? 'Petrol' : 'Diesel';
+    })(),
+    vehicleOwnership: (row[6]?.toUpperCase() === 'PRIVATE' ? 'Private' : 'Company'),
     issuedDate: str(row[7]),
     fuelAlloted: num(row[8]),
     issuedThrough: str(row[9]),
