@@ -62,7 +62,9 @@ export default function Index() {
   const siteAllotedMap: Record<string, number> = {};
   allRecords.forEach((r) => {
     if (r.siteName) {
-      const key = `${r.siteName}|${r.fuelType || 'Diesel'}`;
+      // Normalize fuelType to match purchase records
+      const ft = r.fuelType?.toUpperCase() === 'PETROL' ? 'Petrol' : 'Diesel';
+      const key = `${r.siteName}|${ft}`;
       siteAllotedMap[key] = (siteAllotedMap[key] || 0) + r.fuelAlloted;
     }
   });

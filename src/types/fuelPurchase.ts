@@ -16,6 +16,10 @@ export function rowToPurchase(row: string[], index: number): FuelPurchase {
     date: row[0] || '',
     liters: Number(row[1]) || 0,
     site: row[2] || '',
-    fuelType: row[3] || 'Diesel',
+    fuelType: (() => {
+      const raw = row[3] || '';
+      if (!raw) return 'Diesel';
+      return raw.toUpperCase() === 'PETROL' ? 'Petrol' : 'Diesel';
+    })(),
   };
 }
