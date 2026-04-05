@@ -267,6 +267,20 @@ serve(async (req) => {
         const result = await getVehicleLastEntry(vehicleNo);
         return json({ lastEntry: result?.row || null });
       }
+      if (action === 'get_all') {
+        // Return both sheets for full export
+        await ensureHeaders('Sheet1', SHEET1_HEADERS);
+        await ensureSheet('FuelPurchases');
+        const colLetter = colToLetter(SHEET1_HEADERS.length);
+        const [sheet1Data, purchaseData] = await Promise.all([
+          sheetsRequest(`/values/Sheet1!A1:${colLetter}`),
+          sheetsRequest('/values/FuelPurchases!A1:E'),
+        ]);
+        return json({
+          sheet1: sheet1Data.values || [],
+          purchases: purchaseData.values || [],
+        });
+      }
     }
 
     if (req.method === 'POST') {
