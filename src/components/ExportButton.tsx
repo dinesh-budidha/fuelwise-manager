@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { FuelRecord, COLUMNS } from '@/types/fuel';
-import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 
 interface Props {
@@ -12,58 +11,50 @@ export default function ExportButton({ records }: Props) {
   const [open, setOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const fetchLatestData = async () => {
+  const fetchAllSheets = async () => {
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sheets-api?action=get`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sheets-api?action=get_all`;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
       const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
       });
-      if (!res.ok) throw new Error('Failed to fetch latest data');
-      const data = await res.json();
-      return data.rows as string[][] || [];
+      if (!res.ok) throw new Error('Failed to fetch data');
+      return await res.json();
     } catch {
       return null;
     }
   };
 
-  const getData = (rows: string[][] | null) => {
-    if (rows) {
-      return rows.map(row =>
-        COLUMNS.reduce((obj, col, i) => ({ ...obj, [col]: row[i] || '' }), {} as Record<string, string>)
-      );
-    }
-    // Fallback to local records
-    return records.map(r => ({
-      [COLUMNS[0]]: r.slNo,
-      [COLUMNS[1]]: r.siteName,
-      [COLUMNS[2]]: r.vehicleSentToLocation || '',
-      [COLUMNS[3]]: r.vehicleNo,
-      [COLUMNS[4]]: r.vehicleType,
-      [COLUMNS[5]]: r.fuelType,
-      [COLUMNS[6]]: r.vehicleOwnership,
-      [COLUMNS[7]]: r.issuedDate,
-      [COLUMNS[8]]: r.fuelAlloted,
-      [COLUMNS[9]]: r.issuedThrough,
-      [COLUMNS[10]]: r.issuedThroughValue,
-      [COLUMNS[11]]: r.startingReading,
-      [COLUMNS[12]]: r.endingReading,
-      [COLUMNS[13]]: r.kilometers,
-      [COLUMNS[14]]: r.hours,
-      [COLUMNS[15]]: r.kmPerLtr,
-      [COLUMNS[16]]: r.usedInLtrs,
-      [COLUMNS[17]]: r.balanceLiters,
-      [COLUMNS[18]]: r.dgCapacity,
-    }));
-  };
-
   const exportFile = async (type: 'xlsx' | 'csv') => {
     setExporting(true);
     try {
-      const rows = await fetchLatestData();
-      const ws = XLSX.utils.json_to_sheet(getData(rows));
+      const data = await fetchAllSheets();
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Fuel Data');
+
+      if (data?.sheet1) {
+        // sheet1 includes headers as first row
+        const ws1 = XLSX.utils.aoa_to_sheet(data.sheet1);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1');
+      } else {
+        // Fallback to local records
+        const rows = records.map(r => ({
+          [COLUMNS[0]]: r.slNo, [COLUMNS[1]]: r.siteName, [COLUMNS[2]]: r.vehicleSentToLocation || '',
+          [COLUMNS[3]]: r.vehicleNo, [COLUMNS[4]]: r.vehicleType, [COLUMNS[5]]: r.fuelType,
+          [COLUMNS[6]]: r.vehicleOwnership, [COLUMNS[7]]: r.issuedDate, [COLUMNS[8]]: r.fuelAlloted,
+          [COLUMNS[9]]: r.issuedThrough, [COLUMNS[10]]: r.issuedThroughValue,
+          [COLUMNS[11]]: r.startingReading, [COLUMNS[12]]: r.endingReading, [COLUMNS[13]]: r.kilometers,
+          [COLUMNS[14]]: r.hours, [COLUMNS[15]]: r.kmPerLtr, [COLUMNS[16]]: r.usedInLtrs,
+          [COLUMNS[17]]: r.balanceLiters, [COLUMNS[18]]: r.dgCapacity,
+        }));
+        const ws1 = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws1, 'Sheet1');
+      }
+
+      if (data?.purchases) {
+        const ws2 = XLSX.utils.aoa_to_sheet(data.purchases);
+        XLSX.utils.book_append_sheet(wb, ws2, 'FuelPurchases');
+      }
+
       XLSX.writeFile(wb, `fuel-data.${type}`);
     } finally {
       setExporting(false);
